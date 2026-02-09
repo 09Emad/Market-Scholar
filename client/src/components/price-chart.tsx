@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { LineChart as LineChartIcon } from "lucide-react";
 import { TIME_RANGES, formatCurrency } from "@/lib/constants";
 
@@ -14,6 +13,224 @@ interface PriceChartProps {
   onTimeRangeChange: (range: string) => void;
 }
 
+const CANDLE_GREEN = "#26a69a";
+const CANDLE_RED = "#ef5350";
+
+interface ChartEntry {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  isUp: boolean;
+}
+
+function CandlestickSVG({
+  data,
+  width,
+  height,
+  hoveredIndex,
+  onHover,
+}: {
+  data: ChartEntry[];
+  width: number;
+  height: number;
+  hoveredIndex: number | null;
+  onHover: (index: number | null) => void;
+}) {
+  const margin = { top: 10, right: 60, bottom: 30, left: 10 };
+  const volumeHeight = height * 0.18;
+  const priceHeight = height - margin.top - margin.bottom - volumeHeight - 8;
+  const chartWidth = width - margin.left - margin.right;
+
+  const highs = data.map(d => d.high);
+  const lows = data.map(d => d.low);
+  const pMin = Math.min(...lows);
+  const pMax = Math.max(...highs);
+  const padding = (pMax - pMin) * 0.05 || 1;
+  const domainMin = pMin - padding;
+  const domainMax = pMax + padding;
+  const vMax = Math.max(...data.map(d => d.volume), 1);
+
+  const priceScale = (val: number) => margin.top + ((domainMax - val) / (domainMax - domainMin)) * priceHeight;
+  const volBottom = margin.top + priceHeight + 8 + volumeHeight;
+  const volScale = (val: number) => volBottom - (val / vMax) * volumeHeight;
+
+  const barGap = chartWidth / data.length;
+  const candleWidth = Math.max(1, barGap * 0.6);
+
+  const labelCount = Math.max(1, Math.floor(chartWidth / 80));
+  const step = Math.max(1, Math.floor(data.length / labelCount));
+  const xLabels: { index: number; label: string }[] = [];
+  for (let i = 0; i < data.length; i += step) {
+    xLabels.push({ index: i, label: data[i].date });
+  }
+
+  const priceTicks: number[] = [];
+  const tickCount = 5;
+  for (let i = 0; i <= tickCount; i++) {
+    priceTicks.push(domainMin + (domainMax - domainMin) * (i / tickCount));
+  }
+
+  return (
+    <svg width={width} height={height} className="select-none">
+      {priceTicks.map((tick, i) => (
+        <g key={`grid-${i}`}>
+          <line
+            x1={margin.left}
+            y1={priceScale(tick)}
+            x2={width - margin.right}
+            y2={priceScale(tick)}
+            stroke="hsl(var(--border))"
+            strokeDasharray="3 3"
+            strokeWidth={0.5}
+          />
+          <text
+            x={width - margin.right + 5}
+            y={priceScale(tick) + 4}
+            fontSize={10}
+            fill="hsl(var(--muted-foreground))"
+            textAnchor="start"
+          >
+            ${tick.toFixed(tick >= 100 ? 0 : 2)}
+          </text>
+        </g>
+      ))}
+
+      {data.map((d, i) => {
+        const x = margin.left + i * barGap + barGap / 2;
+        const color = d.isUp ? CANDLE_GREEN : CANDLE_RED;
+
+        const bodyTop = priceScale(d.isUp ? d.close : d.open);
+        const bodyBottom = priceScale(d.isUp ? d.open : d.close);
+        const bodyH = Math.max(1, bodyBottom - bodyTop);
+
+        const wickTop = priceScale(d.high);
+        const wickBottom = priceScale(d.low);
+
+        const volTop = volScale(d.volume);
+
+        return (
+          <g key={`candle-${i}`}>
+            <rect
+              x={x - barGap / 2}
+              y={margin.top}
+              width={barGap}
+              height={height - margin.bottom - margin.top}
+              fill="transparent"
+              onMouseEnter={() => onHover(i)}
+            />
+            <rect
+              x={x - candleWidth / 2}
+              y={volTop}
+              width={candleWidth}
+              height={Math.max(0, volBottom - volTop)}
+              fill={color}
+              opacity={0.3}
+              pointerEvents="none"
+            />
+            <line
+              x1={x}
+              y1={wickTop}
+              x2={x}
+              y2={wickBottom}
+              stroke={color}
+              strokeWidth={1}
+              pointerEvents="none"
+            />
+            <rect
+              x={x - candleWidth / 2}
+              y={bodyTop}
+              width={candleWidth}
+              height={bodyH}
+              fill={color}
+              stroke={color}
+              strokeWidth={0.5}
+              pointerEvents="none"
+            />
+          </g>
+        );
+      })}
+
+      {hoveredIndex !== null && (
+        <line
+          x1={margin.left + hoveredIndex * barGap + barGap / 2}
+          y1={margin.top}
+          x2={margin.left + hoveredIndex * barGap + barGap / 2}
+          y2={margin.top + priceHeight}
+          stroke="hsl(var(--muted-foreground))"
+          strokeWidth={0.5}
+          strokeDasharray="3 3"
+          opacity={0.5}
+          pointerEvents="none"
+        />
+      )}
+
+      {xLabels.map(({ index, label }) => (
+        <text
+          key={`xlabel-${index}`}
+          x={margin.left + index * barGap + barGap / 2}
+          y={height - 8}
+          fontSize={10}
+          fill="hsl(var(--muted-foreground))"
+          textAnchor="middle"
+        >
+          {label}
+        </text>
+      ))}
+
+      <text
+        x={margin.left + 2}
+        y={margin.top + priceHeight + 14}
+        fontSize={9}
+        fill="hsl(var(--muted-foreground))"
+        opacity={0.5}
+      >
+        Vol
+      </text>
+    </svg>
+  );
+}
+
+function ChartTooltip({ data, x, chartWidth }: { data: ChartEntry; x: number; chartWidth: number }) {
+  const isUp = data.close >= data.open;
+  const changePercent = ((data.close - data.open) / data.open * 100).toFixed(2);
+  const tooltipLeft = x > chartWidth / 2;
+
+  return (
+    <div
+      className="absolute bg-popover border border-popover-border rounded-md p-3 shadow-lg min-w-[175px] pointer-events-none z-50"
+      style={{
+        top: 20,
+        ...(tooltipLeft ? { right: chartWidth - x + 15 } : { left: x + 15 }),
+      }}
+    >
+      <p className="text-xs text-muted-foreground mb-1.5">{data.date}</p>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">
+        <span className="text-muted-foreground">Open</span>
+        <span className="font-mono text-foreground text-right">{formatCurrency(data.open)}</span>
+        <span className="text-muted-foreground">High</span>
+        <span className="font-mono text-foreground text-right">{formatCurrency(data.high)}</span>
+        <span className="text-muted-foreground">Low</span>
+        <span className="font-mono text-foreground text-right">{formatCurrency(data.low)}</span>
+        <span className="text-muted-foreground">Close</span>
+        <span className={`font-mono text-right font-medium ${isUp ? "text-[#26a69a]" : "text-[#ef5350]"}`}>
+          {formatCurrency(data.close)}
+        </span>
+        <span className="text-muted-foreground">Change</span>
+        <span className={`font-mono text-right ${isUp ? "text-[#26a69a]" : "text-[#ef5350]"}`}>
+          {isUp ? "+" : ""}{changePercent}%
+        </span>
+        <span className="text-muted-foreground">Volume</span>
+        <span className="font-mono text-foreground text-right">
+          {data.volume >= 1e6 ? `${(data.volume / 1e6).toFixed(1)}M` : data.volume >= 1e3 ? `${(data.volume / 1e3).toFixed(0)}K` : data.volume}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function PriceChart({
   data,
   isLoading,
@@ -21,6 +238,25 @@ export function PriceChart({
   timeRange,
   onTimeRangeChange,
 }: PriceChartProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 600, height: 380 });
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setDimensions({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   if (isLoading) {
     return (
       <Card>
@@ -33,7 +269,7 @@ export function PriceChart({
           </div>
         </CardHeader>
         <CardContent className="p-4 pt-0">
-          <Skeleton className="h-[300px] w-full rounded-md" />
+          <Skeleton className="h-[380px] w-full rounded-md" />
         </CardContent>
       </Card>
     );
@@ -46,7 +282,7 @@ export function PriceChart({
           <CardTitle className="text-base font-medium">Price Chart</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
-          <div className="h-[300px] flex flex-col items-center justify-center text-center">
+          <div className="h-[380px] flex flex-col items-center justify-center text-center">
             <LineChartIcon className="h-10 w-10 text-muted-foreground mb-3" />
             <p className="text-sm text-muted-foreground">
               Select a stock to view price history
@@ -57,11 +293,17 @@ export function PriceChart({
     );
   }
 
-  const firstPrice = data[0]?.close ?? 0;
-  const lastPrice = data[data.length - 1]?.close ?? 0;
-  const isPositive = lastPrice >= firstPrice;
-  const gradientId = `priceGradient-${symbol}`;
-  const strokeColor = isPositive ? "#10B981" : "#EF4444";
+  const chartData: ChartEntry[] = data.map((d) => ({
+    ...d,
+    isUp: d.close >= d.open,
+  }));
+
+  const margin = { top: 10, right: 60, bottom: 30, left: 10 };
+  const chartWidth = dimensions.width - margin.left - margin.right;
+  const barGap = chartWidth / chartData.length;
+
+  const tooltipData = hoveredIndex !== null ? chartData[hoveredIndex] : null;
+  const tooltipX = hoveredIndex !== null ? margin.left + hoveredIndex * barGap + barGap / 2 : 0;
 
   return (
     <Card>
@@ -69,7 +311,7 @@ export function PriceChart({
         <CardTitle className="text-base font-medium">
           {symbol} Price Chart
         </CardTitle>
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           {TIME_RANGES.map((r) => (
             <Button
               key={r.value}
@@ -85,60 +327,32 @@ export function PriceChart({
         </div>
       </CardHeader>
       <CardContent className="p-4 pt-0">
-        <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={strokeColor} stopOpacity={0.2} />
-                  <stop offset="95%" stopColor={strokeColor} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                tickLine={false}
-                axisLine={false}
-                minTickGap={40}
-              />
-              <YAxis
-                domain={["auto", "auto"]}
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(val) => `$${val}`}
-                width={65}
-              />
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0].payload;
-                  return (
-                    <div className="bg-popover border border-popover-border rounded-md p-3 shadow-lg">
-                      <p className="text-xs text-muted-foreground mb-1">{d.date}</p>
-                      <p className="text-sm font-medium font-mono">{formatCurrency(d.close)}</p>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 mt-1.5 text-xs text-muted-foreground">
-                        <span>O: <span className="font-mono text-foreground">{formatCurrency(d.open)}</span></span>
-                        <span>H: <span className="font-mono text-foreground">{formatCurrency(d.high)}</span></span>
-                        <span>L: <span className="font-mono text-foreground">{formatCurrency(d.low)}</span></span>
-                        <span>V: <span className="font-mono text-foreground">{(d.volume / 1e6).toFixed(1)}M</span></span>
-                      </div>
-                    </div>
-                  );
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="close"
-                stroke={strokeColor}
-                strokeWidth={2}
-                fill={`url(#${gradientId})`}
-                dot={false}
-                activeDot={{ r: 4, strokeWidth: 2, fill: strokeColor }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        <div
+          ref={containerRef}
+          className="h-[380px] relative"
+          data-testid="candlestick-chart"
+          onMouseLeave={() => setHoveredIndex(null)}
+        >
+          <CandlestickSVG
+            data={chartData}
+            width={dimensions.width}
+            height={dimensions.height}
+            hoveredIndex={hoveredIndex}
+            onHover={setHoveredIndex}
+          />
+          {tooltipData && (
+            <ChartTooltip data={tooltipData} x={tooltipX} chartWidth={dimensions.width} />
+          )}
+        </div>
+        <div className="flex items-center justify-center gap-4 mt-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: CANDLE_GREEN }} />
+            Bullish (Close &gt; Open)
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: CANDLE_RED }} />
+            Bearish (Close &lt; Open)
+          </span>
         </div>
       </CardContent>
     </Card>
