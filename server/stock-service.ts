@@ -69,12 +69,12 @@ export async function getStockHistory(
   range: string
 ): Promise<Array<{ date: string; close: number; open: number; high: number; low: number; volume: number }>> {
   const rangeMap: Record<string, { range: string; interval: string }> = {
-    "1d": { range: "1d", interval: "5m" },
+    "1d": { range: "1d", interval: "2m" },
     "1w": { range: "5d", interval: "15m" },
     "1m": { range: "1mo", interval: "1d" },
     "3m": { range: "3mo", interval: "1d" },
     "6m": { range: "6mo", interval: "1d" },
-    "1y": { range: "1y", interval: "1wk" },
+    "1y": { range: "1y", interval: "1d" },
   };
 
   const config = rangeMap[range] || rangeMap["1m"];
