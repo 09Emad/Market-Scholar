@@ -65,6 +65,12 @@ export const newsArticleSchema = z.object({
   sentimentScore: z.number().optional(),
 });
 
+export const analysisReportSectionSchema = z.object({
+  title: z.string(),
+  icon: z.string(),
+  content: z.string(),
+});
+
 export const predictionResultSchema = z.object({
   symbol: z.string(),
   direction: z.enum(["up", "down"]),
@@ -87,6 +93,7 @@ export const predictionResultSchema = z.object({
     feature: z.string(),
     importance: z.number(),
   })),
+  analysisReport: z.array(analysisReportSectionSchema).optional(),
 });
 
 export type StockQuote = z.infer<typeof stockQuoteSchema>;

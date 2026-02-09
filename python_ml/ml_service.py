@@ -201,6 +201,24 @@ def train_and_predict(prices, sentiment_score, symbol):
 
     technical_score = float(np.clip(0.5 + avg_change * 10, 0, 1))
 
+    news_impact_desc = get_news_impact_description(sentiment_score)
+
+    analysis_report = generate_analysis_report(
+        symbol=symbol,
+        direction=direction,
+        confidence=confidence,
+        sentiment_score=sentiment_score,
+        technical_score=technical_score,
+        price_action=price_action,
+        volume_signal=volume_signal,
+        volume_ratio=volume_ratio,
+        avg_change=avg_change,
+        news_impact=news_impact_desc,
+        recent_prices=recent_prices,
+        importance=importance,
+        model_metrics={'accuracy': accuracy, 'precision': precision, 'recall': recall, 'f1_score': f1}
+    )
+
     result = {
         'direction': direction,
         'confidence': round(confidence, 4),
@@ -216,8 +234,9 @@ def train_and_predict(prices, sentiment_score, symbol):
             'sentiment_score': round(sentiment_score, 4),
             'volume_signal': volume_signal,
             'price_action': price_action,
-            'news_impact': get_news_impact_description(sentiment_score)
+            'news_impact': news_impact_desc
         },
+        'analysis_report': analysis_report,
         'model_info': {
             'algorithm': 'LSTM (Long Short-Term Memory)',
             'text_processing': 'TF-IDF + VADER Sentiment',
@@ -284,6 +303,187 @@ def compute_feature_importance(model, X_test, y_test, feature_names):
     return result
 
 
+def generate_analysis_report(symbol, direction, confidence, sentiment_score, technical_score,
+                             price_action, volume_signal, volume_ratio, avg_change,
+                             news_impact, recent_prices, importance, model_metrics):
+    sections = []
+
+    direction_word = "upward" if direction == "up" else "downward"
+    confidence_pct = round(confidence * 100)
+
+    if confidence_pct >= 80:
+        confidence_level = "high"
+    elif confidence_pct >= 60:
+        confidence_level = "moderate"
+    else:
+        confidence_level = "low"
+
+    summary = (
+        f"Based on LSTM neural network analysis of {symbol}'s recent market data, "
+        f"the model predicts an {direction_word} price movement for the next trading day "
+        f"with {confidence_level} confidence ({confidence_pct}%). "
+        f"This prediction is derived from a combination of technical indicators, "
+        f"price momentum, trading volume patterns, and news sentiment analysis."
+    )
+    sections.append({
+        'title': 'Summary',
+        'icon': 'summary',
+        'content': summary
+    })
+
+    price_change_pct = round(avg_change * 100, 2)
+    if len(recent_prices) >= 2:
+        start_price = recent_prices[0]
+        end_price = recent_prices[-1]
+        total_change = round(((end_price - start_price) / start_price) * 100, 2)
+    else:
+        total_change = 0
+        start_price = 0
+        end_price = 0
+
+    if avg_change > 0.005:
+        trend_desc = f"{symbol} has shown a strong upward trend over the recent period, with an average daily return of +{price_change_pct}%."
+    elif avg_change > 0:
+        trend_desc = f"{symbol} has shown a slight upward trend recently, with a modest average daily return of +{price_change_pct}%."
+    elif avg_change > -0.005:
+        trend_desc = f"{symbol} has shown a slight downward trend recently, with an average daily return of {price_change_pct}%."
+    else:
+        trend_desc = f"{symbol} has shown a strong downward trend over the recent period, with an average daily return of {price_change_pct}%."
+
+    if len(recent_prices) >= 2:
+        trend_desc += f" Over the last 20 trading sessions, the stock moved from ${start_price:.2f} to ${end_price:.2f} ({'+' if total_change > 0 else ''}{total_change}%)."
+
+    tech_score_pct = round(technical_score * 100)
+    if tech_score_pct > 60:
+        trend_desc += f" The technical score of {tech_score_pct}% indicates bullish momentum."
+    elif tech_score_pct < 40:
+        trend_desc += f" The technical score of {tech_score_pct}% indicates bearish momentum."
+    else:
+        trend_desc += f" The technical score of {tech_score_pct}% suggests a neutral technical outlook."
+
+    sections.append({
+        'title': 'Price Action & Trend',
+        'icon': 'trend',
+        'content': trend_desc
+    })
+
+    if volume_ratio > 1.3:
+        vol_desc = (
+            f"Trading volume is significantly above average (ratio: {volume_ratio:.2f}x), "
+            f"indicating strong market interest and conviction behind the current price movement. "
+            f"High volume typically confirms the prevailing trend direction."
+        )
+    elif volume_ratio > 0.8:
+        vol_desc = (
+            f"Trading volume is near the average level (ratio: {volume_ratio:.2f}x), "
+            f"suggesting normal market participation. "
+            f"This indicates steady interest without extreme buying or selling pressure."
+        )
+    else:
+        vol_desc = (
+            f"Trading volume is below average (ratio: {volume_ratio:.2f}x), "
+            f"indicating reduced market participation. "
+            f"Low volume may suggest uncertainty or a potential consolidation phase."
+        )
+
+    sections.append({
+        'title': 'Volume Analysis',
+        'icon': 'volume',
+        'content': vol_desc
+    })
+
+    sent_pct = round(sentiment_score * 100)
+    if sentiment_score > 0.65:
+        sent_desc = (
+            f"News sentiment analysis (TF-IDF + VADER) shows a strongly positive sentiment score of {sent_pct}%. "
+            f"Recent news coverage for {symbol} has been predominantly favorable, "
+            f"which historically correlates with positive price movements."
+        )
+    elif sentiment_score > 0.55:
+        sent_desc = (
+            f"News sentiment analysis shows a moderately positive score of {sent_pct}%. "
+            f"Recent news about {symbol} leans positive, suggesting generally favorable market perception, "
+            f"though not overwhelmingly bullish."
+        )
+    elif sentiment_score > 0.45:
+        sent_desc = (
+            f"News sentiment analysis shows a neutral score of {sent_pct}%. "
+            f"Recent news coverage about {symbol} is mixed, with balanced positive and negative reports. "
+            f"A neutral sentiment suggests the market is undecided about future direction."
+        )
+    elif sentiment_score > 0.35:
+        sent_desc = (
+            f"News sentiment analysis shows a moderately negative score of {sent_pct}%. "
+            f"Recent news about {symbol} leans negative, indicating some market concerns "
+            f"that could put downward pressure on the stock price."
+        )
+    else:
+        sent_desc = (
+            f"News sentiment analysis shows a strongly negative score of {sent_pct}%. "
+            f"Recent news coverage for {symbol} has been predominantly unfavorable, "
+            f"which may weigh on the stock's near-term performance."
+        )
+
+    sections.append({
+        'title': 'News Sentiment',
+        'icon': 'news',
+        'content': sent_desc
+    })
+
+    if importance and len(importance) >= 3:
+        top3 = importance[:3]
+        top_names = [f"{f['feature']} ({round(f['importance']*100)}%)" for f in top3]
+        feat_desc = (
+            f"The LSTM model identified the most influential factors for this prediction as: "
+            f"{', '.join(top_names)}. "
+        )
+        if top3[0]['feature'] == 'News Sentiment':
+            feat_desc += "News sentiment is the dominant driver, suggesting external events are heavily influencing the forecast."
+        elif top3[0]['feature'] in ('Price Returns', 'Momentum'):
+            feat_desc += "Price momentum is the dominant driver, indicating the model is primarily following the recent trend direction."
+        elif top3[0]['feature'] == 'Volatility':
+            feat_desc += "Market volatility is the dominant driver, suggesting high uncertainty in the current market conditions."
+        elif top3[0]['feature'] == 'Volume Change':
+            feat_desc += "Volume dynamics are the dominant driver, indicating that changes in trading activity are a key signal."
+        else:
+            feat_desc += f"{top3[0]['feature']} is the most significant factor in the model's decision-making process."
+    else:
+        feat_desc = "Feature importance analysis was not available for this prediction."
+
+    sections.append({
+        'title': 'Key Drivers',
+        'icon': 'drivers',
+        'content': feat_desc
+    })
+
+    acc_pct = round(model_metrics['accuracy'] * 100)
+    f1_pct = round(model_metrics['f1_score'] * 100)
+    if acc_pct >= 60:
+        model_desc = (
+            f"The LSTM model achieved {acc_pct}% accuracy and {f1_pct}% F1-score on the test dataset. "
+            f"These metrics suggest reasonable predictive performance, though past performance "
+            f"does not guarantee future accuracy. "
+        )
+    else:
+        model_desc = (
+            f"The LSTM model achieved {acc_pct}% accuracy and {f1_pct}% F1-score on the test dataset. "
+            f"These metrics indicate limited predictive reliability. Stock markets are inherently "
+            f"unpredictable, and predictions should be treated with caution. "
+        )
+    model_desc += (
+        "This model is designed for educational and research purposes only and should not be used "
+        "as the sole basis for investment decisions."
+    )
+
+    sections.append({
+        'title': 'Model Confidence',
+        'icon': 'model',
+        'content': model_desc
+    })
+
+    return sections
+
+
 def get_news_impact_description(sentiment_score):
     if sentiment_score > 0.65:
         return "Strong positive news sentiment"
@@ -306,6 +506,28 @@ def generate_fallback_prediction(prices, sentiment_score):
     else:
         direction = 'up'
         confidence = 0.5
+
+    fallback_report = [
+        {
+            'title': 'Summary',
+            'icon': 'summary',
+            'content': (
+                f"Insufficient historical data is available for a full LSTM analysis. "
+                f"A simplified prediction suggests a {'upward' if direction == 'up' else 'downward'} "
+                f"price movement with low confidence ({round(confidence * 100)}%). "
+                f"More data is needed for a reliable analysis."
+            )
+        },
+        {
+            'title': 'Data Limitation',
+            'icon': 'model',
+            'content': (
+                "The LSTM model requires at least 6 months of historical data to produce reliable predictions. "
+                "The current dataset is too small for proper training and evaluation. "
+                "Results from this fallback method should be treated with extra caution."
+            )
+        }
+    ]
 
     return {
         'direction': direction,
@@ -332,6 +554,7 @@ def generate_fallback_prediction(prices, sentiment_score):
             'price_action': 'Insufficient data for analysis',
             'news_impact': get_news_impact_description(sentiment_score)
         },
+        'analysis_report': fallback_report,
         'model_info': {
             'algorithm': 'Fallback (insufficient data for LSTM)',
             'text_processing': 'TF-IDF + VADER Sentiment',

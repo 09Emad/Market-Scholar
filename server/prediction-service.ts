@@ -82,6 +82,7 @@ export async function generatePrediction(symbol: string): Promise<PredictionResu
         f1Score: mlResult.model_metrics.f1_score,
       },
       featureImportance: mlResult.feature_importance,
+      analysisReport: mlResult.analysis_report || [],
     };
   } catch (error: any) {
     console.error("ML Prediction error:", error.message);
