@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { spawn } from "child_process";
 
 const app = express();
 const httpServer = createServer(app);
@@ -59,7 +60,38 @@ app.use((req, res, next) => {
   next();
 });
 
+function startMLService() {
+  const mlProcess = spawn("python3", ["python_ml/ml_service.py"], {
+    env: { ...process.env, ML_SERVICE_PORT: "5001" },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  mlProcess.stdout.on("data", (data: Buffer) => {
+    log(data.toString().trim(), "ml-service");
+  });
+
+  mlProcess.stderr.on("data", (data: Buffer) => {
+    const msg = data.toString().trim();
+    if (msg && !msg.includes("WARNING") && !msg.includes("FutureWarning")) {
+      log(msg, "ml-service");
+    }
+  });
+
+  mlProcess.on("close", (code: number | null) => {
+    log(`ML service exited with code ${code}`, "ml-service");
+    setTimeout(() => {
+      log("Restarting ML service...", "ml-service");
+      startMLService();
+    }, 3000);
+  });
+
+  return mlProcess;
+}
+
 (async () => {
+  startMLService();
+  log("Python ML service starting on port 5001...");
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
