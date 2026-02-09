@@ -86,7 +86,7 @@ function CandlestickSVG({
   const volScale = (val: number) => volBottom - (val / vMax) * volumeHeight;
 
   const barGap = chartWidth / data.length;
-  const candleWidth = Math.max(2, Math.min(barGap * 0.75, 20));
+  const candleWidth = Math.max(1, Math.min(barGap * 0.6, 14));
 
   const labelCount = Math.max(1, Math.floor(chartWidth / 90));
   const step = Math.max(1, Math.floor(data.length / labelCount));
