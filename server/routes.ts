@@ -81,6 +81,24 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/stock/batch-quotes", async (req, res) => {
+    try {
+      const symbols = (req.query.symbols as string || "").split(",").filter(Boolean).slice(0, 20);
+      if (symbols.length === 0) {
+        return res.status(400).json({ message: "No symbols provided" });
+      }
+      const quotes = await Promise.allSettled(
+        symbols.map(s => getStockQuote(s.toUpperCase().trim()))
+      );
+      const results = quotes
+        .filter((r): r is PromiseFulfilledResult<any> => r.status === "fulfilled")
+        .map(r => r.value);
+      res.json(results);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to fetch batch quotes" });
+    }
+  });
+
   app.get("/api/predictions", async (_req, res) => {
     try {
       const predictions = await storage.getPredictions(50);

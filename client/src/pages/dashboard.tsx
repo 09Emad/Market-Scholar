@@ -12,6 +12,8 @@ import { ModelMetrics } from "@/components/model-metrics";
 import { FeatureImportance } from "@/components/feature-importance";
 import { PredictionHistory } from "@/components/prediction-history";
 import { Disclaimer, RiskLimitations } from "@/components/disclaimer";
+import { TickerBar } from "@/components/ticker-bar";
+import { Watchlist } from "@/components/watchlist";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -103,6 +105,8 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      <TickerBar onSelectStock={handleSelectStock} />
+
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="max-w-[1400px] mx-auto px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
@@ -170,8 +174,8 @@ export default function Dashboard() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-2 space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+              <div className="lg:col-span-3 space-y-4">
                 <StockPriceCard
                   quote={stockQuery.data ?? null}
                   isLoading={stockQuery.isLoading && !!selectedSymbol}
@@ -185,6 +189,10 @@ export default function Dashboard() {
                 />
               </div>
               <div className="space-y-4">
+                <Watchlist
+                  onSelectStock={handleSelectStock}
+                  currentSymbol={selectedSymbol}
+                />
                 <NewsFeed
                   articles={newsQuery.data ?? null}
                   isLoading={newsQuery.isLoading && !!selectedSymbol}
