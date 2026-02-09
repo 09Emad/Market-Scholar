@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LineChart as LineChartIcon } from "lucide-react";
 import { TIME_RANGES, formatCurrency } from "@/lib/constants";
+import { useTheme } from "@/components/theme-toggle";
 
 interface PriceChartProps {
   data: Array<{ date: string; close: number; open: number; high: number; low: number; volume: number }> | null;
@@ -15,15 +16,25 @@ interface PriceChartProps {
 
 const CANDLE_GREEN = "#26a69a";
 const CANDLE_RED = "#ef5350";
-const CHART_BG = "#131722";
-const GRID_COLOR = "#1e222d";
-const AXIS_COLOR = "#787b86";
-const CROSSHAIR_COLOR = "#9598a1";
 const MA20_COLOR = "#f7a21b";
 const MA50_COLOR = "#2962ff";
 const RSI_LINE_COLOR = "#7b61ff";
 const RSI_OVERBOUGHT = "#ef5350";
 const RSI_OVERSOLD = "#26a69a";
+
+function getChartTheme(isDark: boolean) {
+  return {
+    bg: isDark ? "#131722" : "#ffffff",
+    grid: isDark ? "#1e222d" : "#e0e3eb",
+    axis: isDark ? "#787b86" : "#6b7280",
+    crosshair: isDark ? "#9598a1" : "#9ca3af",
+    volumeUp: isDark ? "rgba(38,166,154,0.3)" : "rgba(38,166,154,0.4)",
+    volumeDown: isDark ? "rgba(239,83,80,0.3)" : "rgba(239,83,80,0.4)",
+    rsiZone: isDark ? "rgba(123,97,255,0.05)" : "rgba(123,97,255,0.08)",
+    rsiGrid: isDark ? "#1e222d" : "#e0e3eb",
+    textColor: isDark ? "#d1d4dc" : "#374151",
+  };
+}
 
 interface ChartEntry {
   date: string;
@@ -98,6 +109,7 @@ function CandlestickSVG({
   showMA20,
   showMA50,
   showRSI,
+  isDark,
 }: {
   data: ChartEntry[];
   width: number;
@@ -108,7 +120,9 @@ function CandlestickSVG({
   showMA20: boolean;
   showMA50: boolean;
   showRSI: boolean;
+  isDark: boolean;
 }) {
+  const theme = getChartTheme(isDark);
   const margin = { top: 8, right: 70, bottom: 28, left: 8 };
   const rsiHeight = showRSI ? 80 : 0;
   const rsiGap = showRSI ? 6 : 0;
@@ -214,7 +228,7 @@ function CandlestickSVG({
   const totalBottom = showRSI ? rsiBottom : volBottom;
 
   return (
-    <svg width={width} height={height} className="select-none" style={{ backgroundColor: CHART_BG }}>
+    <svg width={width} height={height} className="select-none" style={{ backgroundColor: theme.bg }}>
       <defs>
         <clipPath id="chartArea">
           <rect x={margin.left} y={margin.top} width={chartWidth} height={priceHeight + 4 + volumeHeight} />
@@ -229,15 +243,15 @@ function CandlestickSVG({
         if (y < margin.top || y > chartBottom) return null;
         return (
           <g key={`grid-${i}`}>
-            <line x1={margin.left} y1={y} x2={chartRight} y2={y} stroke={GRID_COLOR} strokeWidth={1} />
-            <text x={chartRight + 8} y={y + 4} fontSize={11} fill={AXIS_COLOR} fontFamily="monospace" textAnchor="start">
+            <line x1={margin.left} y1={y} x2={chartRight} y2={y} stroke={theme.grid} strokeWidth={1} />
+            <text x={chartRight + 8} y={y + 4} fontSize={11} fill={theme.axis} fontFamily="monospace" textAnchor="start">
               {tick.toFixed(decimals)}
             </text>
           </g>
         );
       })}
 
-      <line x1={chartRight} y1={margin.top} x2={chartRight} y2={totalBottom} stroke={GRID_COLOR} strokeWidth={1} />
+      <line x1={chartRight} y1={margin.top} x2={chartRight} y2={totalBottom} stroke={theme.grid} strokeWidth={1} />
 
       <g clipPath="url(#chartArea)">
         {data.map((d, i) => {
@@ -252,7 +266,7 @@ function CandlestickSVG({
 
           return (
             <g key={`candle-${i}`}>
-              <rect x={x - candleWidth / 2} y={volTop} width={candleWidth} height={Math.max(0, volBottom - volTop)} fill={color} opacity={0.4} />
+              <rect x={x - candleWidth / 2} y={volTop} width={candleWidth} height={Math.max(0, volBottom - volTop)} fill={d.isUp ? theme.volumeUp : theme.volumeDown} />
               <line x1={x} y1={wickTop} x2={x} y2={wickBottom} stroke={color} strokeWidth={1} />
               <rect x={x - candleWidth / 2} y={bodyTop} width={candleWidth} height={bodyH} fill={color} />
             </g>
@@ -269,14 +283,14 @@ function CandlestickSVG({
 
       {showRSI && (
         <g>
-          <line x1={margin.left} y1={rsiTop} x2={chartRight} y2={rsiTop} stroke={AXIS_COLOR} strokeWidth={0.5} opacity={0.5} />
+          <line x1={margin.left} y1={rsiTop} x2={chartRight} y2={rsiTop} stroke={theme.axis} strokeWidth={0.5} opacity={0.5} />
           <line x1={margin.left} y1={rsiScale(70)} x2={chartRight} y2={rsiScale(70)} stroke={RSI_OVERBOUGHT} strokeWidth={0.5} strokeDasharray="3 3" opacity={0.5} />
           <line x1={margin.left} y1={rsiScale(30)} x2={chartRight} y2={rsiScale(30)} stroke={RSI_OVERSOLD} strokeWidth={0.5} strokeDasharray="3 3" opacity={0.5} />
-          <line x1={margin.left} y1={rsiScale(50)} x2={chartRight} y2={rsiScale(50)} stroke={GRID_COLOR} strokeWidth={0.5} strokeDasharray="2 2" />
-          <line x1={margin.left} y1={rsiBottom} x2={chartRight} y2={rsiBottom} stroke={GRID_COLOR} strokeWidth={0.5} />
+          <line x1={margin.left} y1={rsiScale(50)} x2={chartRight} y2={rsiScale(50)} stroke={theme.grid} strokeWidth={0.5} strokeDasharray="2 2" />
+          <line x1={margin.left} y1={rsiBottom} x2={chartRight} y2={rsiBottom} stroke={theme.grid} strokeWidth={0.5} />
 
           <text x={chartRight + 8} y={rsiScale(70) + 4} fontSize={9} fill={RSI_OVERBOUGHT} fontFamily="monospace" opacity={0.7}>70</text>
-          <text x={chartRight + 8} y={rsiScale(50) + 4} fontSize={9} fill={AXIS_COLOR} fontFamily="monospace" opacity={0.7}>50</text>
+          <text x={chartRight + 8} y={rsiScale(50) + 4} fontSize={9} fill={theme.axis} fontFamily="monospace" opacity={0.7}>50</text>
           <text x={chartRight + 8} y={rsiScale(30) + 4} fontSize={9} fill={RSI_OVERSOLD} fontFamily="monospace" opacity={0.7}>30</text>
 
           <text x={margin.left + 4} y={rsiTop + 12} fontSize={10} fill={RSI_LINE_COLOR} fontFamily="monospace" opacity={0.8}>RSI(14)</text>
@@ -302,8 +316,8 @@ function CandlestickSVG({
 
       {hoveredIndex !== null && hoveredEntry && (
         <g pointerEvents="none">
-          <line x1={hoveredX} y1={margin.top} x2={hoveredX} y2={totalBottom} stroke={CROSSHAIR_COLOR} strokeWidth={0.5} strokeDasharray="4 3" opacity={0.7} />
-          <line x1={margin.left} y1={hoveredY} x2={chartRight} y2={hoveredY} stroke={CROSSHAIR_COLOR} strokeWidth={0.5} strokeDasharray="4 3" opacity={0.7} />
+          <line x1={hoveredX} y1={margin.top} x2={hoveredX} y2={totalBottom} stroke={theme.crosshair} strokeWidth={0.5} strokeDasharray="4 3" opacity={0.7} />
+          <line x1={margin.left} y1={hoveredY} x2={chartRight} y2={hoveredY} stroke={theme.crosshair} strokeWidth={0.5} strokeDasharray="4 3" opacity={0.7} />
           <rect x={chartRight} y={hoveredY - 10} width={margin.right - 2} height={20} rx={2} fill="#363a45" />
           <text x={chartRight + (margin.right - 2) / 2} y={hoveredY + 4} fontSize={10} fill="#d1d4dc" fontFamily="monospace" textAnchor="middle">
             {hoveredEntry.close.toFixed(2)}
@@ -311,7 +325,7 @@ function CandlestickSVG({
 
           {showRSI && hoveredRSI !== null && (
             <>
-              <line x1={hoveredX} y1={rsiTop} x2={hoveredX} y2={rsiBottom} stroke={CROSSHAIR_COLOR} strokeWidth={0.5} strokeDasharray="4 3" opacity={0.5} />
+              <line x1={hoveredX} y1={rsiTop} x2={hoveredX} y2={rsiBottom} stroke={theme.crosshair} strokeWidth={0.5} strokeDasharray="4 3" opacity={0.5} />
               <circle cx={hoveredX} cy={rsiScale(hoveredRSI)} r={3} fill={RSI_LINE_COLOR} />
             </>
           )}
@@ -319,12 +333,12 @@ function CandlestickSVG({
       )}
 
       {xLabels.map(({ index, label }) => (
-        <text key={`xlabel-${index}`} x={margin.left + index * barGap + barGap / 2} y={height - 6} fontSize={10} fill={AXIS_COLOR} fontFamily="monospace" textAnchor="middle">
+        <text key={`xlabel-${index}`} x={margin.left + index * barGap + barGap / 2} y={height - 6} fontSize={10} fill={theme.axis} fontFamily="monospace" textAnchor="middle">
           {label}
         </text>
       ))}
 
-      <text x={margin.left + 6} y={margin.top + 14} fontSize={10} fill={AXIS_COLOR} fontFamily="monospace" opacity={0.7}>
+      <text x={margin.left + 6} y={margin.top + 14} fontSize={10} fill={theme.axis} fontFamily="monospace" opacity={0.7}>
         Vol {formatVol(lastEntry.volume)}
       </text>
     </svg>
@@ -338,6 +352,7 @@ export function PriceChart({
   timeRange,
   onTimeRangeChange,
 }: PriceChartProps) {
+  const { isDark } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 600, height: 450 });
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -384,9 +399,9 @@ export function PriceChart({
           <CardTitle className="text-base font-medium">Price Chart</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
-          <div className="h-[450px] flex flex-col items-center justify-center text-center" style={{ backgroundColor: CHART_BG, borderRadius: 6 }}>
-            <LineChartIcon className="h-10 w-10 mb-3" style={{ color: AXIS_COLOR }} />
-            <p className="text-sm" style={{ color: AXIS_COLOR }}>Select a stock to view price history</p>
+          <div className="h-[450px] flex flex-col items-center justify-center text-center" style={{ backgroundColor: getChartTheme(isDark).bg, borderRadius: 6 }}>
+            <LineChartIcon className="h-10 w-10 mb-3" style={{ color: getChartTheme(isDark).axis }} />
+            <p className="text-sm" style={{ color: getChartTheme(isDark).axis }}>Select a stock to view price history</p>
           </div>
         </CardContent>
       </Card>
@@ -421,13 +436,13 @@ export function PriceChart({
         <div className="flex items-center gap-3 flex-wrap">
           <CardTitle className="text-base font-medium">{symbol}</CardTitle>
           <div className="flex items-center gap-2 text-xs font-mono" data-testid="ohlc-bar">
-            <span style={{ color: AXIS_COLOR }}>O</span>
+            <span style={{ color: getChartTheme(isDark).axis }}>O</span>
             <span style={{ color: ohlcColor }}>{ohlcDisplay.open.toFixed(2)}</span>
-            <span style={{ color: AXIS_COLOR }}>H</span>
+            <span style={{ color: getChartTheme(isDark).axis }}>H</span>
             <span style={{ color: ohlcColor }}>{ohlcDisplay.high.toFixed(2)}</span>
-            <span style={{ color: AXIS_COLOR }}>L</span>
+            <span style={{ color: getChartTheme(isDark).axis }}>L</span>
             <span style={{ color: ohlcColor }}>{ohlcDisplay.low.toFixed(2)}</span>
-            <span style={{ color: AXIS_COLOR }}>C</span>
+            <span style={{ color: getChartTheme(isDark).axis }}>C</span>
             <span style={{ color: ohlcColor }} className="font-medium">{ohlcDisplay.close.toFixed(2)}</span>
           </div>
           {hoveredMA20 !== null && (
@@ -507,6 +522,7 @@ export function PriceChart({
             showMA20={showMA20}
             showMA50={showMA50}
             showRSI={showRSI}
+            isDark={isDark}
           />
         </div>
       </CardContent>

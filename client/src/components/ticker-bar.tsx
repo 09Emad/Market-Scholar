@@ -22,8 +22,7 @@ export function TickerBar({ onSelectStock }: { onSelectStock?: (symbol: string) 
 
   return (
     <div
-      className="border-b overflow-hidden"
-      style={{ backgroundColor: "#0f1117" }}
+      className="border-b overflow-hidden bg-card dark:bg-[#0f1117]"
       data-testid="ticker-bar"
     >
       <div className="ticker-scroll flex items-center gap-6 py-1.5 px-4 whitespace-nowrap">
@@ -36,8 +35,8 @@ export function TickerBar({ onSelectStock }: { onSelectStock?: (symbol: string) 
               onClick={() => onSelectStock?.(q.symbol)}
               data-testid={`ticker-item-${q.symbol}-${i}`}
             >
-              <span className="text-xs font-semibold text-white">{q.symbol}</span>
-              <span className="text-xs font-mono text-gray-300">${q.price.toFixed(2)}</span>
+              <span className="text-xs font-semibold text-foreground">{q.symbol}</span>
+              <span className="text-xs font-mono text-muted-foreground">${q.price.toFixed(2)}</span>
               <span
                 className="text-xs font-mono font-medium"
                 style={{ color: isPositive ? "#26a69a" : "#ef5350" }}

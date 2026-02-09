@@ -14,6 +14,7 @@ import { PredictionHistory } from "@/components/prediction-history";
 import { Disclaimer, RiskLimitations } from "@/components/disclaimer";
 import { TickerBar } from "@/components/ticker-bar";
 import { Watchlist } from "@/components/watchlist";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -122,6 +123,7 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-3">
             <MarketStatus />
+            <ThemeToggle />
           </div>
         </div>
       </header>
