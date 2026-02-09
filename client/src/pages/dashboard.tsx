@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { getMarketStatus } from "@/lib/constants";
 import { StockSearch } from "@/components/stock-search";
 import { MarketStatus } from "@/components/market-status";
 import { StockPriceCard } from "@/components/stock-price-card";
@@ -23,16 +24,35 @@ export default function Dashboard() {
   const [timeRange, setTimeRange] = useState("1m");
   const { toast } = useToast();
 
+  const [marketActive, setMarketActive] = useState(() => {
+    const s = getMarketStatus().status;
+    return s === "open" || s === "pre-market" || s === "after-hours";
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const s = getMarketStatus().status;
+      setMarketActive(s === "open" || s === "pre-market" || s === "after-hours");
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const isMarketActive = marketActive;
+  const priceRefreshInterval = isMarketActive ? 30000 : false;
+  const chartRefreshInterval = isMarketActive && timeRange === "1d" ? 30000 : false;
+
   const stockQuery = useQuery<StockQuote>({
     queryKey: ["/api/stock/quote", selectedSymbol],
     enabled: !!selectedSymbol,
-    staleTime: 60000,
+    staleTime: 15000,
+    refetchInterval: priceRefreshInterval,
   });
 
   const chartQuery = useQuery<Array<{ date: string; close: number; open: number; high: number; low: number; volume: number }>>({
     queryKey: ["/api/stock/history", selectedSymbol, timeRange],
     enabled: !!selectedSymbol,
-    staleTime: 60000,
+    staleTime: 15000,
+    refetchInterval: chartRefreshInterval,
   });
 
   const newsQuery = useQuery<NewsArticle[]>({
