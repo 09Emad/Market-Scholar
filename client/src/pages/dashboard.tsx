@@ -70,14 +70,19 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    apiRequest("POST", "/api/predictions/validate")
-      .then((res) => res.json())
-      .then((data: { validated: number }) => {
-        if (data.validated > 0) {
-          queryClient.invalidateQueries({ queryKey: ["/api/predictions"] });
-        }
-      })
-      .catch(() => {});
+    const runValidation = () => {
+      apiRequest("POST", "/api/predictions/validate")
+        .then((res) => res.json())
+        .then((data: { validated: number }) => {
+          if (data.validated > 0) {
+            queryClient.invalidateQueries({ queryKey: ["/api/predictions"] });
+          }
+        })
+        .catch(() => {});
+    };
+    runValidation();
+    const interval = setInterval(runValidation, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const predictionMutation = useMutation({
