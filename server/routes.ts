@@ -73,6 +73,7 @@ export async function registerRoutes(
         sentimentScore: prediction.factors.sentimentScore,
         factors: prediction.factors,
         actualDirection: null,
+        actualPrice: null,
         wasCorrect: null,
       });
 
@@ -153,7 +154,7 @@ export async function registerRoutes(
             const actualDirection = currentPrice >= pred.currentPrice ? "up" : "down";
             const wasCorrect = actualDirection === pred.direction ? 1 : 0;
 
-            await storage.updatePredictionOutcome(pred.id, actualDirection, wasCorrect);
+            await storage.updatePredictionOutcome(pred.id, actualDirection, wasCorrect, currentPrice);
             results.push({
               id: pred.id,
               symbol: pred.symbol,

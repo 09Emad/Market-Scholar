@@ -9,7 +9,7 @@ export interface IStorage {
   createPrediction(prediction: InsertPrediction): Promise<Prediction>;
   getPredictions(limit?: number): Promise<Prediction[]>;
   getPredictionsBySymbol(symbol: string): Promise<Prediction[]>;
-  updatePredictionOutcome(id: number, actualDirection: string, wasCorrect: number): Promise<void>;
+  updatePredictionOutcome(id: number, actualDirection: string, wasCorrect: number, actualPrice: number): Promise<void>;
   getUnvalidatedPredictions(): Promise<Prediction[]>;
 }
 
@@ -53,11 +53,12 @@ export class DatabaseStorage implements IStorage {
   async updatePredictionOutcome(
     id: number,
     actualDirection: string,
-    wasCorrect: number
+    wasCorrect: number,
+    actualPrice: number
   ): Promise<void> {
     await db
       .update(predictions)
-      .set({ actualDirection, wasCorrect })
+      .set({ actualDirection, wasCorrect, actualPrice })
       .where(eq(predictions.id, id));
   }
 

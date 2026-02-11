@@ -20,6 +20,7 @@ export const predictions = pgTable("predictions", {
   sentimentScore: real("sentiment_score"),
   factors: jsonb("factors"),
   actualDirection: text("actual_direction"),
+  actualPrice: real("actual_price"),
   wasCorrect: integer("was_correct"),
 });
 

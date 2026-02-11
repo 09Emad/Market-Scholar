@@ -100,7 +100,7 @@ function PredictionDetailPanel({ pred }: { pred: Prediction }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className={`grid gap-2 ${pred.actualPrice != null ? "grid-cols-3" : "grid-cols-2"}`}>
         <div className="p-2 rounded-md bg-muted/40">
           <div className="flex items-center gap-1.5 mb-1">
             <DollarSign className="h-3 w-3 text-muted-foreground" />
@@ -110,6 +110,28 @@ function PredictionDetailPanel({ pred }: { pred: Prediction }) {
             {pred.currentPrice != null ? `$${pred.currentPrice.toFixed(2)}` : "N/A"}
           </p>
         </div>
+
+        {pred.actualPrice != null && (
+          <div className="p-2 rounded-md bg-muted/40">
+            <div className="flex items-center gap-1.5 mb-1">
+              <BarChart3 className="h-3 w-3 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Price at Expiry</span>
+            </div>
+            <p className="text-sm font-mono font-medium" data-testid={`text-actual-price-${pred.id}`}>
+              ${pred.actualPrice.toFixed(2)}
+            </p>
+            {pred.currentPrice != null && (() => {
+              const change = pred.actualPrice! - pred.currentPrice;
+              const changePct = (change / pred.currentPrice) * 100;
+              const isPositive = change >= 0;
+              return (
+                <p className={`text-xs font-mono mt-0.5 ${isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                  {isPositive ? "+" : ""}{change.toFixed(2)} ({isPositive ? "+" : ""}{changePct.toFixed(2)}%)
+                </p>
+              );
+            })()}
+          </div>
+        )}
 
         <div className="p-2 rounded-md bg-muted/40">
           <div className="flex items-center gap-1.5 mb-1">
@@ -124,17 +146,22 @@ function PredictionDetailPanel({ pred }: { pred: Prediction }) {
       </div>
 
       {pred.actualDirection && (
-        <div className="p-2 rounded-md bg-muted/40">
-          <div className="flex items-center gap-1.5 mb-1">
-            <BarChart3 className="h-3 w-3 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Actual Result</span>
+        <div className={`p-2 rounded-md ${pred.wasCorrect === 1 ? "bg-emerald-50 dark:bg-emerald-950/20" : "bg-red-50 dark:bg-red-950/20"}`}>
+          <div className="flex items-center gap-2">
+            {pred.wasCorrect === 1 ? (
+              <CheckCircle className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+            ) : (
+              <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+            )}
+            <div>
+              <p className={`text-sm font-medium ${pred.wasCorrect === 1 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                {pred.wasCorrect === 1 ? "Prediction was correct" : "Prediction was wrong"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Actual: {pred.actualDirection === "up" ? "Up" : "Down"} | Predicted: {isUp ? "Up" : "Down"}
+              </p>
+            </div>
           </div>
-          <p className={`text-sm font-medium flex items-center gap-1 ${pred.actualDirection === "up" ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
-            {pred.actualDirection === "up" ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-            {pred.actualDirection === "up" ? "Up" : "Down"}
-            {pred.wasCorrect === 1 && <span className="ml-1 text-emerald-600 dark:text-emerald-400">(Prediction was correct)</span>}
-            {pred.wasCorrect === 0 && <span className="ml-1 text-red-600 dark:text-red-400">(Prediction was wrong)</span>}
-          </p>
         </div>
       )}
 
