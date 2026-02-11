@@ -54,9 +54,11 @@ export function PredictionHistory({ predictions, isLoading }: PredictionHistoryP
 
   const totalPredictions = predictions.length;
   const correctPredictions = predictions.filter((p) => p.wasCorrect === 1).length;
+  const incorrectPredictions = predictions.filter((p) => p.wasCorrect === 0).length;
   const pendingPredictions = predictions.filter((p) => p.wasCorrect === null || p.wasCorrect === undefined).length;
-  const accuracy = totalPredictions - pendingPredictions > 0
-    ? (correctPredictions / (totalPredictions - pendingPredictions)) * 100
+  const validatedCount = correctPredictions + incorrectPredictions;
+  const accuracy = validatedCount > 0
+    ? (correctPredictions / validatedCount) * 100
     : 0;
 
   return (
@@ -68,7 +70,7 @@ export function PredictionHistory({ predictions, isLoading }: PredictionHistoryP
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0">
-        <div className="grid grid-cols-3 gap-2 mb-3">
+        <div className="grid grid-cols-4 gap-2 mb-3">
           <div className="p-2 rounded-md bg-muted/40 text-center">
             <p className="text-lg font-bold font-mono" data-testid="text-total-predictions">
               {totalPredictions}
@@ -81,13 +83,28 @@ export function PredictionHistory({ predictions, isLoading }: PredictionHistoryP
             </p>
             <p className="text-xs text-muted-foreground">Correct</p>
           </div>
+          <div className="p-2 rounded-md bg-red-50 dark:bg-red-950/20 text-center">
+            <p className="text-lg font-bold font-mono text-red-600 dark:text-red-400" data-testid="text-incorrect-predictions">
+              {incorrectPredictions}
+            </p>
+            <p className="text-xs text-muted-foreground">Wrong</p>
+          </div>
           <div className="p-2 rounded-md bg-muted/40 text-center">
             <p className="text-lg font-bold font-mono" data-testid="text-accuracy-rate">
-              {accuracy.toFixed(1)}%
+              {validatedCount > 0 ? `${accuracy.toFixed(1)}%` : "N/A"}
             </p>
             <p className="text-xs text-muted-foreground">Accuracy</p>
           </div>
         </div>
+
+        {pendingPredictions > 0 && (
+          <div className="flex items-center gap-2 mb-3 p-2 rounded-md bg-amber-50 dark:bg-amber-950/20">
+            <Clock className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+            <p className="text-xs text-amber-700 dark:text-amber-400" data-testid="text-pending-count">
+              {pendingPredictions} prediction{pendingPredictions > 1 ? "s" : ""} awaiting validation (target date not reached yet)
+            </p>
+          </div>
+        )}
 
         <ScrollArea className="h-[300px]">
           <div className="space-y-1.5 pr-3">
@@ -125,6 +142,11 @@ export function PredictionHistory({ predictions, isLoading }: PredictionHistoryP
                       <span className="text-xs font-mono text-muted-foreground">
                         {(pred.confidence * 100).toFixed(0)}%
                       </span>
+                      {pred.actualDirection && (
+                        <span className="text-xs text-muted-foreground">
+                          Actual: <span className={pred.actualDirection === "up" ? "text-emerald-500" : "text-red-500"}>{pred.actualDirection === "up" ? "Up" : "Down"}</span>
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {pred.predictionDate

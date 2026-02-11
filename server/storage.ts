@@ -1,6 +1,6 @@
 import { predictions, type Prediction, type InsertPrediction, users, type User, type InsertUser } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, isNull } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -10,6 +10,7 @@ export interface IStorage {
   getPredictions(limit?: number): Promise<Prediction[]>;
   getPredictionsBySymbol(symbol: string): Promise<Prediction[]>;
   updatePredictionOutcome(id: number, actualDirection: string, wasCorrect: number): Promise<void>;
+  getUnvalidatedPredictions(): Promise<Prediction[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -58,6 +59,14 @@ export class DatabaseStorage implements IStorage {
       .update(predictions)
       .set({ actualDirection, wasCorrect })
       .where(eq(predictions.id, id));
+  }
+
+  async getUnvalidatedPredictions(): Promise<Prediction[]> {
+    return db
+      .select()
+      .from(predictions)
+      .where(isNull(predictions.wasCorrect))
+      .orderBy(desc(predictions.predictionDate));
   }
 }
 

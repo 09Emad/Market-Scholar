@@ -69,6 +69,17 @@ export default function Dashboard() {
     staleTime: 30000,
   });
 
+  useEffect(() => {
+    apiRequest("POST", "/api/predictions/validate")
+      .then((res) => res.json())
+      .then((data: { validated: number }) => {
+        if (data.validated > 0) {
+          queryClient.invalidateQueries({ queryKey: ["/api/predictions"] });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const predictionMutation = useMutation({
     mutationFn: async (symbol: string) => {
       const res = await apiRequest("POST", "/api/stock/predict", { symbol });

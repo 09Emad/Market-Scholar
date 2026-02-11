@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getStockQuote, getStockHistory, getStockNews } from "./stock-service";
 import { analyzeSentiment, generatePrediction } from "./prediction-service";
+import { log } from "./index";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -115,6 +116,60 @@ export async function registerRoutes(
       res.json(predictions);
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to fetch predictions" });
+    }
+  });
+
+  app.post("/api/predictions/validate", async (_req, res) => {
+    try {
+      const unvalidated = await storage.getUnvalidatedPredictions();
+      if (unvalidated.length === 0) {
+        return res.json({ validated: 0, results: [] });
+      }
+
+      const now = new Date();
+      const results: Array<{ id: number; symbol: string; wasCorrect: boolean }> = [];
+
+      const symbolGroups = new Map<string, typeof unvalidated>();
+      for (const pred of unvalidated) {
+        const targetDateStr = pred.targetDate;
+        const targetDate = new Date(targetDateStr);
+        if (isNaN(targetDate.getTime())) continue;
+        if (targetDate > now) continue;
+
+        if (!symbolGroups.has(pred.symbol)) {
+          symbolGroups.set(pred.symbol, []);
+        }
+        symbolGroups.get(pred.symbol)!.push(pred);
+      }
+
+      for (const [symbol, preds] of Array.from(symbolGroups.entries())) {
+        try {
+          const quote = await getStockQuote(symbol);
+          const currentPrice = quote.price;
+
+          for (const pred of preds) {
+            if (!pred.currentPrice) continue;
+
+            const actualDirection = currentPrice >= pred.currentPrice ? "up" : "down";
+            const wasCorrect = actualDirection === pred.direction ? 1 : 0;
+
+            await storage.updatePredictionOutcome(pred.id, actualDirection, wasCorrect);
+            results.push({
+              id: pred.id,
+              symbol: pred.symbol,
+              wasCorrect: wasCorrect === 1,
+            });
+
+            log(`Validated prediction #${pred.id} for ${symbol}: predicted=${pred.direction}, actual=${actualDirection}, correct=${wasCorrect === 1}`);
+          }
+        } catch (err: any) {
+          log(`Failed to validate predictions for ${symbol}: ${err.message}`);
+        }
+      }
+
+      res.json({ validated: results.length, results });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to validate predictions" });
     }
   });
 
