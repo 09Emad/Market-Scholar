@@ -11,9 +11,16 @@ interface PredictionHistoryProps {
   isLoading: boolean;
 }
 
-function getTimeInfo(targetDateStr: string, predictionDate: Date | string | null) {
+function getTimeInfo(targetDateStr: string, predictionDate: Date | string | null, targetExpiryAt?: string | null) {
   const now = new Date();
-  const target = new Date(targetDateStr);
+  let target: Date;
+  if (targetExpiryAt) {
+    target = new Date(targetExpiryAt);
+  } else {
+    const parsed = new Date(targetDateStr);
+    if (isNaN(parsed.getTime())) return { isExpired: false, label: "", detail: "" };
+    target = new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 21, 0, 0));
+  }
   if (isNaN(target.getTime())) return { isExpired: false, label: "", detail: "" };
 
   const diffMs = target.getTime() - now.getTime();
@@ -50,7 +57,7 @@ function getTimeInfo(targetDateStr: string, predictionDate: Date | string | null
 }
 
 function PredictionDetailPanel({ pred }: { pred: Prediction }) {
-  const timeInfo = getTimeInfo(pred.targetDate, pred.predictionDate);
+  const timeInfo = getTimeInfo(pred.targetDate, pred.predictionDate, pred.targetExpiryAt);
   const isUp = pred.direction === "up";
 
   const statusLabel =

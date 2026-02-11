@@ -14,6 +14,7 @@ export const predictions = pgTable("predictions", {
   symbol: text("symbol").notNull(),
   predictionDate: timestamp("prediction_date").notNull().defaultNow(),
   targetDate: text("target_date").notNull(),
+  targetExpiryAt: text("target_expiry_at"),
   direction: text("direction").notNull(),
   confidence: real("confidence").notNull(),
   currentPrice: real("current_price"),
