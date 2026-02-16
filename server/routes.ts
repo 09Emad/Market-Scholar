@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getStockQuote, getStockHistory, getStockNews } from "./stock-service";
 import { analyzeSentiment, generatePrediction } from "./prediction-service";
+import { getMarketCloseUTC } from "./market-holidays";
 import { log } from "./index";
 
 export async function registerRoutes(
@@ -65,13 +66,7 @@ export async function registerRoutes(
       const quote = await getStockQuote(symbol.toUpperCase()).catch(() => null);
 
       const parsedTarget = new Date(prediction.targetDate);
-      const ty = parsedTarget.getFullYear(), tm = parsedTarget.getMonth(), td = parsedTarget.getDate();
-      let sc = 0, ds = new Date(Date.UTC(ty, 2, 1));
-      for (let d = 1; d <= 31; d++) { if (new Date(Date.UTC(ty, 2, d)).getUTCDay() === 0) { sc++; if (sc === 2) { ds = new Date(Date.UTC(ty, 2, d)); break; } } }
-      let de = new Date(Date.UTC(ty, 10, 1));
-      for (let d = 1; d <= 30; d++) { if (new Date(Date.UTC(ty, 10, d)).getUTCDay() === 0) { de = new Date(Date.UTC(ty, 10, d)); break; } }
-      const dst = new Date(Date.UTC(ty, tm, td)) >= ds && new Date(Date.UTC(ty, tm, td)) < de;
-      const expiryAt = new Date(Date.UTC(ty, tm, td, dst ? 20 : 21, 0, 0)).toISOString();
+      const expiryAt = getMarketCloseUTC(parsedTarget.getFullYear(), parsedTarget.getMonth(), parsedTarget.getDate()).toISOString();
 
       await storage.createPrediction({
         symbol: symbol.toUpperCase(),
@@ -148,7 +143,7 @@ export async function registerRoutes(
         } else {
           const parsed = new Date(pred.targetDate);
           if (isNaN(parsed.getTime())) continue;
-          expiryTime = new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 21, 0, 0));
+          expiryTime = getMarketCloseUTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
         }
         if (expiryTime > now) continue;
 

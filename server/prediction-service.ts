@@ -1,4 +1,5 @@
 import { getStockHistory, getStockNews } from "./stock-service";
+import { getNextTradingDay } from "./market-holidays";
 import type { PredictionResult, NewsArticle } from "@shared/schema";
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:5001";
@@ -35,12 +36,8 @@ export async function generatePrediction(symbol: string): Promise<PredictionResu
     getStockNews(symbol),
   ]);
 
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  while (tomorrow.getDay() === 0 || tomorrow.getDay() === 6) {
-    tomorrow.setDate(tomorrow.getDate() + 1);
-  }
-  const targetDate = tomorrow.toLocaleDateString("en-US", {
+  const nextTrading = getNextTradingDay(new Date());
+  const targetDate = nextTrading.toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
