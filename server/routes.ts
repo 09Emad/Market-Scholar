@@ -166,7 +166,14 @@ export async function registerRoutes(
           for (const pred of preds) {
             if (!pred.currentPrice) continue;
 
-            const actualDirection = currentPrice >= pred.currentPrice ? "up" : "down";
+            const priceDiff = Math.abs(currentPrice - pred.currentPrice);
+            const priceDiffPct = (priceDiff / pred.currentPrice) * 100;
+            if (priceDiffPct < 0.01) {
+              log(`Skipping validation for prediction #${pred.id} (${symbol}): price unchanged ($${currentPrice} vs $${pred.currentPrice}), market likely closed`);
+              continue;
+            }
+
+            const actualDirection = currentPrice > pred.currentPrice ? "up" : "down";
             const wasCorrect = actualDirection === pred.direction ? 1 : 0;
 
             await storage.updatePredictionOutcome(pred.id, actualDirection, wasCorrect, currentPrice);
