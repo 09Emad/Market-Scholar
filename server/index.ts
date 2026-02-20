@@ -1,8 +1,10 @@
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { spawn } from "child_process";
+import { spawn, execSync } from "child_process";
+import { platform } from "os";
 
 const app = express();
 const httpServer = createServer(app);
@@ -60,8 +62,23 @@ app.use((req, res, next) => {
   next();
 });
 
+function detectPythonCommand(): string {
+  const isWindows = platform() === "win32";
+  const commands = isWindows ? ["python", "python3"] : ["python3", "python"];
+  for (const cmd of commands) {
+    try {
+      execSync(`${cmd} --version`, { stdio: "ignore" });
+      return cmd;
+    } catch {}
+  }
+  return commands[0];
+}
+
 function startMLService() {
-  const mlProcess = spawn("python3", ["python_ml/ml_service.py"], {
+  const pythonCmd = detectPythonCommand();
+  log(`Using Python command: ${pythonCmd}`, "ml-service");
+
+  const mlProcess = spawn(pythonCmd, ["python_ml/ml_service.py"], {
     env: { ...process.env, ML_SERVICE_PORT: "5001" },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -117,19 +134,15 @@ function startMLService() {
     await setupVite(httpServer, app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
+  const isReplit = !!process.env.REPL_ID;
+  const defaultPort = isReplit ? "5000" : "3000";
+  const port = parseInt(process.env.PORT || defaultPort, 10);
+  const host = isReplit ? "0.0.0.0" : "127.0.0.1";
+  const listenOptions: any = { port, host };
+  if (isReplit) {
+    listenOptions.reusePort = true;
+  }
+  httpServer.listen(listenOptions, () => {
+    log(`serving on port ${port}`);
+  });
 })();

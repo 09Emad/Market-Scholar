@@ -2,13 +2,35 @@ import { getStockHistory, getStockNews } from "./stock-service";
 import { getNextTradingDay } from "./market-holidays";
 import type { PredictionResult, NewsArticle } from "@shared/schema";
 
-const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:5001";
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://127.0.0.1:5001";
+
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3, delayMs = 2000): Promise<Response> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120000);
+    try {
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timeout);
+      return response;
+    } catch (error: any) {
+      clearTimeout(timeout);
+      console.error(`ML service attempt ${attempt}/${maxRetries} failed: ${error.message}`);
+      if (attempt < maxRetries) {
+        console.log(`Retrying in ${delayMs / 1000}s...`);
+        await new Promise(r => setTimeout(r, delayMs));
+      } else {
+        throw error;
+      }
+    }
+  }
+  throw new Error("All retry attempts failed");
+}
 
 export async function analyzeSentiment(articles: NewsArticle[]): Promise<NewsArticle[]> {
   if (articles.length === 0) return [];
 
   try {
-    const response = await fetch(`${ML_SERVICE_URL}/analyze-sentiment`, {
+    const response = await fetchWithRetry(`${ML_SERVICE_URL}/analyze-sentiment`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ articles }),
@@ -44,7 +66,8 @@ export async function generatePrediction(symbol: string): Promise<PredictionResu
   });
 
   try {
-    const response = await fetch(`${ML_SERVICE_URL}/predict`, {
+    console.log(`Sending prediction request to ML service at ${ML_SERVICE_URL}/predict for ${symbol}...`);
+    const response = await fetchWithRetry(`${ML_SERVICE_URL}/predict`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -59,6 +82,7 @@ export async function generatePrediction(symbol: string): Promise<PredictionResu
     }
 
     const mlResult = await response.json();
+    console.log(`ML prediction received for ${symbol}: direction=${mlResult.direction}, confidence=${mlResult.confidence}`);
 
     return {
       symbol,
