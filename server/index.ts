@@ -10,6 +10,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { spawn, execSync } from "child_process";
 import { platform } from "os";
+import { waitForMLService } from "./prediction-service";
 
 const app = express();
 const httpServer = createServer(app);
@@ -119,6 +120,14 @@ function startMLService() {
 (async () => {
   startMLService();
   log("Python ML service starting on port 5001...");
+
+  waitForMLService(60).then((ready) => {
+    if (ready) {
+      log("ML service health check passed - predictions will use real LSTM model");
+    } else {
+      log("ML service health check failed - predictions will use fallback until service is available");
+    }
+  });
 
   await registerRoutes(httpServer, app);
 
