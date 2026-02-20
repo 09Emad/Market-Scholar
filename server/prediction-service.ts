@@ -4,10 +4,39 @@ import type { PredictionResult, NewsArticle } from "@shared/schema";
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://127.0.0.1:5001";
 
-async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3, delayMs = 2000): Promise<Response> {
+let mlServiceReady = false;
+
+async function waitForMLService(maxWaitSeconds = 60): Promise<boolean> {
+  if (mlServiceReady) return true;
+
+  console.log("Waiting for ML service to be ready...");
+  const startTime = Date.now();
+  const pollInterval = 2000;
+
+  while (Date.now() - startTime < maxWaitSeconds * 1000) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const response = await fetch(`${ML_SERVICE_URL}/health`, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (response.ok) {
+        console.log("ML service is ready!");
+        mlServiceReady = true;
+        return true;
+      }
+    } catch {
+    }
+    await new Promise(r => setTimeout(r, pollInterval));
+  }
+
+  console.error(`ML service not ready after ${maxWaitSeconds}s`);
+  return false;
+}
+
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 5, delayMs = 3000): Promise<Response> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 120000);
+    const timeout = setTimeout(() => controller.abort(), 180000);
     try {
       const response = await fetch(url, { ...options, signal: controller.signal });
       clearTimeout(timeout);
@@ -28,6 +57,16 @@ async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3,
 
 export async function analyzeSentiment(articles: NewsArticle[]): Promise<NewsArticle[]> {
   if (articles.length === 0) return [];
+
+  const isReady = await waitForMLService();
+  if (!isReady) {
+    console.error("ML service not available for sentiment analysis - returning neutral");
+    return articles.map((a) => ({
+      ...a,
+      sentiment: "neutral" as const,
+      sentimentScore: 0.5,
+    }));
+  }
 
   try {
     const response = await fetchWithRetry(`${ML_SERVICE_URL}/analyze-sentiment`, {
@@ -66,6 +105,11 @@ export async function generatePrediction(symbol: string): Promise<PredictionResu
   });
 
   try {
+    const isReady = await waitForMLService();
+    if (!isReady) {
+      throw new Error("ML service not available after waiting");
+    }
+
     console.log(`Sending prediction request to ML service at ${ML_SERVICE_URL}/predict for ${symbol}...`);
     const response = await fetchWithRetry(`${ML_SERVICE_URL}/predict`, {
       method: "POST",
