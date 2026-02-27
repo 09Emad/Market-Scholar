@@ -1,19 +1,87 @@
+import http from "http";
 import { getStockHistory, getStockNews } from "./stock-service";
 import { getNextTradingDay } from "./market-holidays";
 import type { PredictionResult, NewsArticle } from "@shared/schema";
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://127.0.0.1:5001";
 
-async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3, delayMs = 2000): Promise<Response> {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 120000);
+let mlServiceReady = false;
+
+function httpRequest(url: string, options: { method?: string; headers?: Record<string, string>; body?: string } = {}): Promise<{ status: number; data: any }> {
+  return new Promise((resolve, reject) => {
+    const parsedUrl = new URL(url);
+    const reqOptions: http.RequestOptions = {
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port,
+      path: parsedUrl.pathname,
+      method: options.method || "GET",
+      headers: options.headers || {},
+      timeout: 180000,
+    };
+
+    const req = http.request(reqOptions, (res) => {
+      let data = "";
+      res.on("data", (chunk) => { data += chunk; });
+      res.on("end", () => {
+        try {
+          const parsed = data ? JSON.parse(data) : {};
+          resolve({ status: res.statusCode || 200, data: parsed });
+        } catch {
+          resolve({ status: res.statusCode || 200, data });
+        }
+      });
+    });
+
+    req.on("error", (err) => reject(err));
+    req.on("timeout", () => { req.destroy(); reject(new Error("Request timeout")); });
+
+    if (options.body) {
+      req.write(options.body);
+    }
+    req.end();
+  });
+}
+
+export async function waitForMLService(maxWaitSeconds = 60): Promise<boolean> {
+  if (mlServiceReady) return true;
+
+  console.log(`Waiting for ML service at ${ML_SERVICE_URL} to be ready...`);
+  const startTime = Date.now();
+  const pollInterval = 2000;
+
+  while (Date.now() - startTime < maxWaitSeconds * 1000) {
     try {
-      const response = await fetch(url, { ...options, signal: controller.signal });
-      clearTimeout(timeout);
-      return response;
+      const result = await httpRequest(`${ML_SERVICE_URL}/health`);
+      if (result.status === 200) {
+        console.log("ML service is ready!");
+        mlServiceReady = true;
+        return true;
+      }
+      console.log(`ML service health check returned status ${result.status}, retrying...`);
+    } catch (err: any) {
+      const elapsed = Math.round((Date.now() - startTime) / 1000);
+      console.log(`ML service not ready yet (${elapsed}s elapsed): ${err.message}`);
+    }
+    await new Promise(r => setTimeout(r, pollInterval));
+  }
+
+  console.error(`ML service not ready after ${maxWaitSeconds}s`);
+  return false;
+}
+
+async function mlRequest(endpoint: string, body: any, maxRetries = 5, delayMs = 3000): Promise<any> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await httpRequest(`${ML_SERVICE_URL}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (result.status >= 200 && result.status < 300) {
+        return result.data;
+      }
+      throw new Error(`ML service returned status ${result.status}`);
     } catch (error: any) {
-      clearTimeout(timeout);
       console.error(`ML service attempt ${attempt}/${maxRetries} failed: ${error.message}`);
       if (attempt < maxRetries) {
         console.log(`Retrying in ${delayMs / 1000}s...`);
@@ -29,18 +97,18 @@ async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3,
 export async function analyzeSentiment(articles: NewsArticle[]): Promise<NewsArticle[]> {
   if (articles.length === 0) return [];
 
+  const isReady = await waitForMLService();
+  if (!isReady) {
+    console.error("ML service not available for sentiment analysis - returning neutral");
+    return articles.map((a) => ({
+      ...a,
+      sentiment: "neutral" as const,
+      sentimentScore: 0.5,
+    }));
+  }
+
   try {
-    const response = await fetchWithRetry(`${ML_SERVICE_URL}/analyze-sentiment`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ articles }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`ML service returned ${response.status}`);
-    }
-
-    const result = await response.json();
+    const result = await mlRequest("/analyze-sentiment", { articles });
     return result;
   } catch (error: any) {
     console.error("ML Sentiment analysis error:", error.message);
@@ -66,22 +134,18 @@ export async function generatePrediction(symbol: string): Promise<PredictionResu
   });
 
   try {
-    console.log(`Sending prediction request to ML service at ${ML_SERVICE_URL}/predict for ${symbol}...`);
-    const response = await fetchWithRetry(`${ML_SERVICE_URL}/predict`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        symbol,
-        prices: historyData,
-        news: newsArticles,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`ML service returned ${response.status}`);
+    const isReady = await waitForMLService();
+    if (!isReady) {
+      throw new Error("ML service not available after waiting");
     }
 
-    const mlResult = await response.json();
+    console.log(`Sending prediction request to ML service for ${symbol}...`);
+    const mlResult = await mlRequest("/predict", {
+      symbol,
+      prices: historyData,
+      news: newsArticles,
+    });
+
     console.log(`ML prediction received for ${symbol}: direction=${mlResult.direction}, confidence=${mlResult.confidence}`);
 
     return {

@@ -83,7 +83,7 @@ export default function Dashboard() {
     runValidation();
     const interval = setInterval(runValidation, 30000);
     return () => clearInterval(interval);
-  }, []);
+}, []);
 
   const predictionMutation = useMutation({
     mutationFn: async (symbol: string) => {

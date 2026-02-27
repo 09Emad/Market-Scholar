@@ -1,10 +1,16 @@
 import "dotenv/config";
+
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = "development";
+}
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { spawn, execSync } from "child_process";
 import { platform } from "os";
+import { waitForMLService } from "./prediction-service";
 
 const app = express();
 const httpServer = createServer(app);
@@ -64,14 +70,19 @@ app.use((req, res, next) => {
 
 function detectPythonCommand(): string {
   const isWindows = platform() === "win32";
-  const commands = isWindows ? ["python", "python3"] : ["python3", "python"];
-  for (const cmd of commands) {
+  const venvPaths = isWindows
+    ? ["venv\\Scripts\\python.exe", ".venv\\Scripts\\python.exe"]
+    : ["venv/bin/python", ".venv/bin/python"];
+  const globalCmds = isWindows ? ["python", "python3"] : ["python3", "python"];
+  const allCmds = [...venvPaths, ...globalCmds];
+
+  for (const cmd of allCmds) {
     try {
-      execSync(`${cmd} --version`, { stdio: "ignore" });
+      execSync(`"${cmd}" --version`, { stdio: "ignore" });
       return cmd;
     } catch {}
   }
-  return commands[0];
+  return globalCmds[0];
 }
 
 function startMLService() {
@@ -81,6 +92,7 @@ function startMLService() {
   const mlProcess = spawn(pythonCmd, ["python_ml/ml_service.py"], {
     env: { ...process.env, ML_SERVICE_PORT: "5001" },
     stdio: ["ignore", "pipe", "pipe"],
+    shell: true,
   });
 
   mlProcess.stdout.on("data", (data: Buffer) => {
@@ -108,6 +120,14 @@ function startMLService() {
 (async () => {
   startMLService();
   log("Python ML service starting on port 5001...");
+
+  waitForMLService(60).then((ready) => {
+    if (ready) {
+      log("ML service health check passed - predictions will use real LSTM model");
+    } else {
+      log("ML service health check failed - predictions will use fallback until service is available");
+    }
+  });
 
   await registerRoutes(httpServer, app);
 

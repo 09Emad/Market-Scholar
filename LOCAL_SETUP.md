@@ -100,6 +100,12 @@ npx drizzle-kit push
 
 ## Step 8: Run the Project
 
+On **Windows PowerShell**:
+```powershell
+npx tsx server/index.ts
+```
+
+On **Linux/Mac**:
 ```bash
 npm run dev
 ```
