@@ -69,21 +69,19 @@ export default function Dashboard() {
     staleTime: 30000,
   });
 
-  useEffect(() => {
-    const runValidation = () => {
-      apiRequest("POST", "/api/predictions/validate")
-        .then((res) => res.json())
-        .then((data: { validated: number }) => {
-          if (data.validated > 0) {
-            queryClient.invalidateQueries({ queryKey: ["/api/predictions"] });
-          }
-        })
-        .catch(() => {});
+useEffect(() => {
+    // وظيفة بسيطة فقط لتحديث البيانات الموجودة مسبقاً
+    const refreshData = () => {
+        // هنا نخبر React Query أن تعيد جلب البيانات بطلب GET بسيط
+        // هذا الطلب سيخبر السيرفر "أنا موجود" لتفعيل الـ Flag الذكي
+        queryClient.invalidateQueries({ queryKey: ["/api/predictions"] });
     };
-    runValidation();
-    const interval = setInterval(runValidation, 30000);
+
+    // تحديث الشاشة كل 30 ثانية
+    const interval = setInterval(refreshData, 30000);
+    
     return () => clearInterval(interval);
-}, []);
+}, [queryClient]);
 
   const predictionMutation = useMutation({
     mutationFn: async (symbol: string) => {

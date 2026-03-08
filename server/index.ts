@@ -3,7 +3,8 @@ import "dotenv/config";
 if (!process.env.NODE_ENV) {
   process.env.NODE_ENV = "development";
 }
-
+import cron from 'node-cron'; // المكتبة التي قمت بتثبيتها الآن
+import { performValidationLogic, lastActiveTime } from './routes'; // استيراد الوظائف من الملف الذي عدلناه
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
@@ -162,7 +163,28 @@ function startMLService() {
   if (isReplit) {
     listenOptions.reusePort = true;
   }
-  httpServer.listen(listenOptions, () => {
+  // إعداد المنبه الذكي لتحديث التوقعات في الخلفية
+cron.schedule('*/30 * * * * *', async () => {
+  const tenMinutes = 10 * 60 * 1000; // مهلة النشاط (10 دقائق)
+  const now = Date.now();
+
+  // فحص المفتاح الذكي: هل هناك مستخدم نشط حالياً؟
+  if (now - lastActiveTime < tenMinutes) {
+    log("Activity detected on Dashboard. Running background validation...", "cron");
+    try {
+      const result = await performValidationLogic();
+      if (result && result.validated > 0) {
+        log(`Successfully validated ${result.validated} predictions.`, "cron");
+      }
+    } catch (error) {
+      log(`Error in background validation: ${error}`, "cron");
+    }
+  } else {
+    // السيرفر في وضع "توفير الموارد" لعدم وجود نشاط
+    log("System idle: Skipping background validation.", "cron");
+  }
+});
+httpServer.listen(listenOptions, () => {
     log(`serving on port ${port}`);
   });
 })();

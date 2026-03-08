@@ -6,10 +6,78 @@ import { analyzeSentiment, generatePrediction } from "./prediction-service";
 import { getMarketCloseUTC } from "./market-holidays";
 import { log } from "./index";
 
+// متغير لتتبع آخر نشاط للمستخدمين (المفتاح الذكي)
+export let lastActiveTime = 0;
+
+/**
+ * وظيفة معالجة التحقق من التوقعات (تم فصلها لتسهيل استدعائها من الـ Cron Job)
+ */
+export async function performValidationLogic() {
+  const unvalidated = await storage.getUnvalidatedPredictions();
+  if (unvalidated.length === 0) {
+    return { validated: 0, results: [] };
+  }
+
+  const now = new Date();
+  const results: Array<{ id: number; symbol: string; wasCorrect: boolean }> = [];
+  const symbolGroups = new Map<string, typeof unvalidated>();
+
+  for (const pred of unvalidated) {
+    let expiryTime: Date;
+    if (pred.targetExpiryAt) {
+      expiryTime = new Date(pred.targetExpiryAt);
+    } else {
+      const parsed = new Date(pred.targetDate);
+      if (isNaN(parsed.getTime())) continue;
+      expiryTime = getMarketCloseUTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+    }
+    if (expiryTime > now) continue;
+
+    if (!symbolGroups.has(pred.symbol)) {
+      symbolGroups.set(pred.symbol, []);
+    }
+    symbolGroups.get(pred.symbol)!.push(pred);
+  }
+
+  for (const [symbol, preds] of Array.from(symbolGroups.entries())) {
+    try {
+      const quote = await getStockQuote(symbol);
+      const currentPrice = quote.price;
+
+      for (const pred of preds) {
+        if (!pred.currentPrice) continue;
+
+        const priceDiff = Math.abs(currentPrice - pred.currentPrice);
+        const priceDiffPct = (priceDiff / pred.currentPrice) * 100;
+        if (priceDiffPct < 0.01) {
+          log(`Skipping validation for prediction #${pred.id} (${symbol}): price unchanged ($${currentPrice} vs $${pred.currentPrice}), market likely closed`);
+          continue;
+        }
+
+        const actualDirection = currentPrice > pred.currentPrice ? "up" : "down";
+        const wasCorrect = actualDirection === pred.direction ? 1 : 0;
+
+        await storage.updatePredictionOutcome(pred.id, actualDirection, wasCorrect, currentPrice);
+        results.push({
+          id: pred.id,
+          symbol: pred.symbol,
+          wasCorrect: wasCorrect === 1,
+        });
+
+        log(`Validated prediction #${pred.id} for ${symbol}: predicted=${pred.direction}, actual=${actualDirection}, correct=${wasCorrect === 1}`);
+      }
+    } catch (err: any) {
+      log(`Failed to validate predictions for ${symbol}: ${err.message}`);
+    }
+  }
+  return { validated: results.length, results };
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // --- مسارات الأسهم (Stock Routes) ---
   app.get("/api/stock/quote/:symbol", async (req, res) => {
     try {
       const { symbol } = req.params;
@@ -26,12 +94,9 @@ export async function registerRoutes(
   app.get("/api/stock/history/:symbol/:range", async (req, res) => {
     try {
       const { symbol, range } = req.params;
-      if (!symbol || symbol.length > 10) {
-        return res.status(400).json({ message: "Invalid stock symbol" });
-      }
       const validRanges = ["1d", "1w", "1m", "3m", "6m", "1y"];
-      if (!validRanges.includes(range)) {
-        return res.status(400).json({ message: "Invalid time range" });
+      if (!symbol || symbol.length > 10 || !validRanges.includes(range)) {
+        return res.status(400).json({ message: "Invalid parameters" });
       }
       const history = await getStockHistory(symbol.toUpperCase(), range);
       res.json(history);
@@ -43,9 +108,6 @@ export async function registerRoutes(
   app.get("/api/stock/news/:symbol", async (req, res) => {
     try {
       const { symbol } = req.params;
-      if (!symbol || symbol.length > 10) {
-        return res.status(400).json({ message: "Invalid stock symbol" });
-      }
       const news = await getStockNews(symbol.toUpperCase());
       const analyzed = await analyzeSentiment(news);
       res.json(analyzed);
@@ -57,14 +119,8 @@ export async function registerRoutes(
   app.post("/api/stock/predict", async (req, res) => {
     try {
       const { symbol } = req.body;
-      if (!symbol || typeof symbol !== "string" || symbol.length > 10) {
-        return res.status(400).json({ message: "Invalid stock symbol" });
-      }
-
       const prediction = await generatePrediction(symbol.toUpperCase());
-
       const quote = await getStockQuote(symbol.toUpperCase()).catch(() => null);
-
       const parsedTarget = new Date(prediction.targetDate);
       const expiryAt = getMarketCloseUTC(parsedTarget.getFullYear(), parsedTarget.getMonth(), parsedTarget.getDate()).toISOString();
 
@@ -88,26 +144,11 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/stock/batch-quotes", async (req, res) => {
-    try {
-      const symbols = (req.query.symbols as string || "").split(",").filter(Boolean).slice(0, 20);
-      if (symbols.length === 0) {
-        return res.status(400).json({ message: "No symbols provided" });
-      }
-      const quotes = await Promise.allSettled(
-        symbols.map(s => getStockQuote(s.toUpperCase().trim()))
-      );
-      const results = quotes
-        .filter((r): r is PromiseFulfilledResult<any> => r.status === "fulfilled")
-        .map(r => r.value);
-      res.json(results);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message || "Failed to fetch batch quotes" });
-    }
-  });
-
+  // --- مسارات التوقعات (Predictions Routes) ---
   app.get("/api/predictions", async (_req, res) => {
     try {
+      // تحديث وقت النشاط بمجرد جلب البيانات (يستخدمه الـ Cron Job)
+      lastActiveTime = Date.now(); 
       const predictions = await storage.getPredictions(50);
       res.json(predictions);
     } catch (error: any) {
@@ -125,67 +166,11 @@ export async function registerRoutes(
     }
   });
 
+  // مسار الـ Validate (الآن يستدعي الوظيفة العامة)
   app.post("/api/predictions/validate", async (_req, res) => {
     try {
-      const unvalidated = await storage.getUnvalidatedPredictions();
-      if (unvalidated.length === 0) {
-        return res.json({ validated: 0, results: [] });
-      }
-
-      const now = new Date();
-      const results: Array<{ id: number; symbol: string; wasCorrect: boolean }> = [];
-
-      const symbolGroups = new Map<string, typeof unvalidated>();
-      for (const pred of unvalidated) {
-        let expiryTime: Date;
-        if (pred.targetExpiryAt) {
-          expiryTime = new Date(pred.targetExpiryAt);
-        } else {
-          const parsed = new Date(pred.targetDate);
-          if (isNaN(parsed.getTime())) continue;
-          expiryTime = getMarketCloseUTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
-        }
-        if (expiryTime > now) continue;
-
-        if (!symbolGroups.has(pred.symbol)) {
-          symbolGroups.set(pred.symbol, []);
-        }
-        symbolGroups.get(pred.symbol)!.push(pred);
-      }
-
-      for (const [symbol, preds] of Array.from(symbolGroups.entries())) {
-        try {
-          const quote = await getStockQuote(symbol);
-          const currentPrice = quote.price;
-
-          for (const pred of preds) {
-            if (!pred.currentPrice) continue;
-
-            const priceDiff = Math.abs(currentPrice - pred.currentPrice);
-            const priceDiffPct = (priceDiff / pred.currentPrice) * 100;
-            if (priceDiffPct < 0.01) {
-              log(`Skipping validation for prediction #${pred.id} (${symbol}): price unchanged ($${currentPrice} vs $${pred.currentPrice}), market likely closed`);
-              continue;
-            }
-
-            const actualDirection = currentPrice > pred.currentPrice ? "up" : "down";
-            const wasCorrect = actualDirection === pred.direction ? 1 : 0;
-
-            await storage.updatePredictionOutcome(pred.id, actualDirection, wasCorrect, currentPrice);
-            results.push({
-              id: pred.id,
-              symbol: pred.symbol,
-              wasCorrect: wasCorrect === 1,
-            });
-
-            log(`Validated prediction #${pred.id} for ${symbol}: predicted=${pred.direction}, actual=${actualDirection}, correct=${wasCorrect === 1}`);
-          }
-        } catch (err: any) {
-          log(`Failed to validate predictions for ${symbol}: ${err.message}`);
-        }
-      }
-
-      res.json({ validated: results.length, results });
+      const result = await performValidationLogic();
+      res.json(result);
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to validate predictions" });
     }
