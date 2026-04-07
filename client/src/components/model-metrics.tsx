@@ -123,7 +123,7 @@ export function ModelMetrics({ prediction, isLoading }: ModelMetricsProps) {
                     return (
                       <div className="bg-popover border border-popover-border rounded-md px-3 py-2 shadow-lg">
                         <p className="text-xs font-medium">
-                          {payload[0].payload.name}: {payload[0].value?.toFixed(1)}%
+                          {payload[0].payload.name}: {Number(payload[0].value).toFixed(1)}%
                         </p>
                       </div>
                     );

@@ -11,11 +11,22 @@ import type { StockQuote } from "@shared/schema";
 const STORAGE_KEY = "stockvision-watchlist";
 
 function getStoredWatchlist(): string[] {
+  const fallback = ["AAPL", "TSLA", "NVDA"];
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : ["AAPL", "TSLA", "NVDA"];
+    if (!stored) return fallback;
+
+    const parsed: unknown = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return fallback;
+
+    const normalized = parsed
+      .filter((s): s is string => typeof s === "string")
+      .map((s) => s.trim().toUpperCase())
+      .filter((s) => s.length > 0 && s.length <= 10);
+
+    return normalized.length > 0 ? Array.from(new Set(normalized)) : fallback;
   } catch {
-    return ["AAPL", "TSLA", "NVDA"];
+    return fallback;
   }
 }
 
@@ -150,7 +161,9 @@ export function Watchlist({ onSelectStock, currentSymbol }: WatchlistProps) {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <div className="text-right">
-                      <p className="text-sm font-mono font-medium">${q.price.toFixed(2)}</p>
+                      <p className="text-sm font-mono font-medium">
+                        {Number.isFinite(q.price) ? `$${q.price.toFixed(2)}` : "N/A"}
+                      </p>
                       <p
                         className="text-xs font-mono"
                         style={{ color: isPositive ? "#26a69a" : "#ef5350" }}

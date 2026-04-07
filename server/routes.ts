@@ -91,6 +91,42 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/stock/batch-quotes", async (req, res) => {
+    try {
+      const symbolsParam = typeof req.query.symbols === "string" ? req.query.symbols : "";
+      const symbols = symbolsParam
+        .split(",")
+        .map((s) => s.trim().toUpperCase())
+        .filter((s) => s.length > 0 && s.length <= 10);
+
+      if (symbols.length === 0) {
+        return res.json([]);
+      }
+
+      const uniqueSymbols = Array.from(new Set(symbols)).slice(0, 25);
+      const quotes = await Promise.allSettled(uniqueSymbols.map((symbol) => getStockQuote(symbol)));
+      const successfulQuotes = quotes
+        .filter((result): result is PromiseFulfilledResult<Awaited<ReturnType<typeof getStockQuote>>> => result.status === "fulfilled")
+        .map((result) => result.value)
+        .filter((q) =>
+          typeof q.symbol === "string" &&
+          typeof q.name === "string" &&
+          Number.isFinite(q.price) &&
+          Number.isFinite(q.change) &&
+          Number.isFinite(q.changePercent) &&
+          Number.isFinite(q.open) &&
+          Number.isFinite(q.high) &&
+          Number.isFinite(q.low) &&
+          Number.isFinite(q.previousClose) &&
+          Number.isFinite(q.volume)
+        );
+
+      res.json(successfulQuotes);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to fetch batch quotes" });
+    }
+  });
+
   app.get("/api/stock/history/:symbol/:range", async (req, res) => {
     try {
       const { symbol, range } = req.params;

@@ -36,7 +36,9 @@ export function TickerBar({ onSelectStock }: { onSelectStock?: (symbol: string) 
               data-testid={`ticker-item-${q.symbol}-${i}`}
             >
               <span className="text-xs font-semibold text-foreground">{q.symbol}</span>
-              <span className="text-xs font-mono text-muted-foreground">${q.price.toFixed(2)}</span>
+              <span className="text-xs font-mono text-muted-foreground">
+                {Number.isFinite(q.price) ? `$${q.price.toFixed(2)}` : "N/A"}
+              </span>
               <span
                 className="text-xs font-mono font-medium"
                 style={{ color: isPositive ? "#26a69a" : "#ef5350" }}
