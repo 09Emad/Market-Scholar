@@ -94,6 +94,18 @@ export const predictionResultSchema = z.object({
     importance: z.number(),
   })),
   analysisReport: z.array(analysisReportSectionSchema).optional(),
+  explanation: z.object({
+    direction: z.enum(["up", "down"]),
+    decisionConfidence: z.number(),
+    technicalReasoning: z.array(z.string()),
+    newsAlignment: z.enum(["supportive", "opposing", "neutral"]),
+    newsReasoning: z.array(z.string()),
+    combinedView: z.string(),
+    riskFlags: z.array(z.string()),
+    invalidations: z.array(z.string()),
+    finalNote: z.string(),
+    usedFallback: z.boolean(),
+  }).optional(),
 });
 
 export type StockQuote = z.infer<typeof stockQuoteSchema>;

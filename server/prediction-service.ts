@@ -2,6 +2,7 @@ import http from "http";
 import { getStockHistory, getStockNews } from "./stock-service";
 import { getNextTradingDay } from "./market-holidays";
 import type { PredictionResult, NewsArticle } from "@shared/schema";
+import { buildFallbackExplanation, generateLLMExplanation, type ExplainPayload } from "./llm-explainer";
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://127.0.0.1:5001";
 
@@ -148,6 +149,32 @@ export async function generatePrediction(symbol: string): Promise<PredictionResu
 
     console.log(`ML prediction received for ${symbol}: direction=${mlResult.direction}, confidence=${mlResult.confidence}`);
 
+    const explainPayload: ExplainPayload = mlResult.explain_payload || {
+      symbol,
+      lstm_direction: mlResult.direction as "up" | "down",
+      lstm_confidence: mlResult.confidence,
+      technical_score: mlResult.factors?.technical_score ?? 0.5,
+      price_action: mlResult.factors?.price_action ?? "Unknown",
+      volume_signal: mlResult.factors?.volume_signal ?? "Unknown",
+      sentiment_score: mlResult.factors?.sentiment_score ?? 0.5,
+      news_impact: mlResult.factors?.news_impact ?? "Unknown",
+      top_feature_importance: (mlResult.feature_importance || []).slice(0, 3),
+      recent_news: (newsArticles || []).slice(0, 5).map((article) => ({
+        title: article.title,
+        source: article.source,
+        publishedAt: article.publishedAt,
+      })),
+    };
+
+    let explanation = buildFallbackExplanation(explainPayload, "llm_not_attempted");
+    try {
+      explanation = await generateLLMExplanation(explainPayload);
+    } catch (error: any) {
+      const reason = error?.message || "llm_error";
+      console.error(`LLM explanation failed for ${symbol}: ${reason}`);
+      explanation = buildFallbackExplanation(explainPayload, reason);
+    }
+
     return {
       symbol,
       direction: mlResult.direction as "up" | "down",
@@ -168,6 +195,7 @@ export async function generatePrediction(symbol: string): Promise<PredictionResu
       },
       featureImportance: mlResult.feature_importance,
       analysisReport: mlResult.analysis_report || [],
+      explanation,
     };
   } catch (error: any) {
     console.error("ML Prediction error:", error.message);
@@ -209,6 +237,29 @@ export async function generatePrediction(symbol: string): Promise<PredictionResu
         { feature: "Price Range", importance: 0.08 },
         { feature: "Momentum", importance: 0.07 },
       ],
+      explanation: buildFallbackExplanation(
+        {
+          symbol,
+          lstm_direction: fallbackDirection as "up" | "down",
+          lstm_confidence: 0.45,
+          technical_score: 0.5,
+          price_action: avgPriceChange > 0 ? "Upward trend" : "Downward trend",
+          volume_signal: "ML service unavailable",
+          sentiment_score: 0.5,
+          news_impact: "Analysis unavailable - ML service offline",
+          top_feature_importance: [
+            { feature: "Price Returns", importance: 0.25 },
+            { feature: "Moving Average Ratio", importance: 0.20 },
+            { feature: "News Sentiment", importance: 0.15 },
+          ],
+          recent_news: (newsArticles || []).slice(0, 5).map((article) => ({
+            title: article.title,
+            source: article.source,
+            publishedAt: article.publishedAt,
+          })),
+        },
+        "ml_service_unavailable",
+      ),
     };
   }
 }

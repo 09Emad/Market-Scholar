@@ -202,6 +202,81 @@ export function PredictionCard({ prediction, isLoading, symbol }: PredictionCard
           </CardContent>
         </Card>
       )}
+
+      {prediction.explanation && (
+        <Card data-testid="card-llm-explanation">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <Brain className="h-4 w-4" />
+              LLM Decision Explanation
+              <Badge variant="secondary" className="text-xs ml-auto capitalize">
+                {prediction.explanation.newsAlignment}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0 space-y-4">
+            <div className="rounded-md border p-3">
+              <h4 className="text-sm font-semibold mb-2">Combined View</h4>
+              <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-llm-combined-view">
+                {prediction.explanation.combinedView}
+              </p>
+            </div>
+
+            <div className="rounded-md border p-3">
+              <h4 className="text-sm font-semibold mb-2">Technical Reasoning</h4>
+              <ul className="list-disc pl-4 space-y-1 text-sm text-muted-foreground" data-testid="list-llm-technical-reasoning">
+                {prediction.explanation.technicalReasoning.map((item, idx) => (
+                  <li key={`tech-${idx}`}>{item}</li>
+                ))}
+              </ul>
+            </div>
+
+            {prediction.explanation.newsReasoning.length > 0 && (
+              <div className="rounded-md border p-3">
+                <h4 className="text-sm font-semibold mb-2">News Reasoning</h4>
+                <ul className="list-disc pl-4 space-y-1 text-sm text-muted-foreground" data-testid="list-llm-news-reasoning">
+                  {prediction.explanation.newsReasoning.map((item, idx) => (
+                    <li key={`news-${idx}`}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {prediction.explanation.riskFlags.length > 0 && (
+              <div className="rounded-md border p-3">
+                <h4 className="text-sm font-semibold mb-2">Risk Flags</h4>
+                <ul className="list-disc pl-4 space-y-1 text-sm text-muted-foreground" data-testid="list-llm-risk-flags">
+                  {prediction.explanation.riskFlags.map((item, idx) => (
+                    <li key={`risk-${idx}`}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {prediction.explanation.invalidations.length > 0 && (
+              <div className="rounded-md border p-3">
+                <h4 className="text-sm font-semibold mb-2">Invalidations</h4>
+                <ul className="list-disc pl-4 space-y-1 text-sm text-muted-foreground" data-testid="list-llm-invalidations">
+                  {prediction.explanation.invalidations.map((item, idx) => (
+                    <li key={`inv-${idx}`}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="rounded-md border p-3 bg-muted/30">
+              <p className="text-xs text-muted-foreground" data-testid="text-llm-final-note">
+                {prediction.explanation.finalNote}
+              </p>
+              {prediction.explanation.usedFallback && (
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-2" data-testid="text-llm-fallback-indicator">
+                  Template explanation used (LLM unavailable or invalid response).
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

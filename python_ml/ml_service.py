@@ -138,8 +138,9 @@ def build_lstm_model(input_shape):
     return model
 
 
-def train_and_predict(prices, sentiment_score, symbol):
+def train_and_predict(prices, sentiment_score, symbol, news_articles=None):
     sequence_length = 7
+    news_articles = news_articles or []
 
     X, y, feature_cols, feature_names, scaler = prepare_lstm_data(
         prices, sentiment_score, sequence_length
@@ -219,6 +220,28 @@ def train_and_predict(prices, sentiment_score, symbol):
         model_metrics={'accuracy': accuracy, 'precision': precision, 'recall': recall, 'f1_score': f1}
     )
 
+    top_feature_importance = importance[:3] if importance else []
+    recent_news = []
+    for article in news_articles[:5]:
+        recent_news.append({
+            'title': article.get('title', ''),
+            'source': article.get('source', 'Unknown'),
+            'publishedAt': article.get('publishedAt', '')
+        })
+
+    explain_payload = {
+        'symbol': symbol,
+        'lstm_direction': direction,
+        'lstm_confidence': round(confidence, 4),
+        'technical_score': round(technical_score, 4),
+        'price_action': price_action,
+        'volume_signal': volume_signal,
+        'sentiment_score': round(sentiment_score, 4),
+        'news_impact': news_impact_desc,
+        'top_feature_importance': top_feature_importance,
+        'recent_news': recent_news
+    }
+
     result = {
         'direction': direction,
         'confidence': round(confidence, 4),
@@ -237,6 +260,7 @@ def train_and_predict(prices, sentiment_score, symbol):
             'news_impact': news_impact_desc
         },
         'analysis_report': analysis_report,
+        'explain_payload': explain_payload,
         'model_info': {
             'algorithm': 'LSTM (Long Short-Term Memory)',
             'text_processing': 'TF-IDF + VADER Sentiment',
@@ -611,7 +635,7 @@ def predict_endpoint():
         scores = [s['score'] for s in sentiments]
         avg_sentiment = np.mean(scores) if scores else 0.5
 
-    result = train_and_predict(prices, avg_sentiment, symbol)
+    result = train_and_predict(prices, avg_sentiment, symbol, news_articles)
     result['symbol'] = symbol
 
     return jsonify(result)
