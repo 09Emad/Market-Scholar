@@ -156,10 +156,18 @@ def train_and_predict(prices, sentiment_score, symbol, news_articles=None):
     if len(X_train) < 5 or len(X_test) < 3:
         return generate_fallback_prediction(prices, sentiment_score)
 
-    model = build_lstm_model((X.shape[1], X.shape[2]))
-
-    model.fit(X_train, y_train, epochs=50, batch_size=8, verbose=0,
-              validation_split=0.1)
+    try:
+        model = build_lstm_model((X.shape[1], X.shape[2]))
+        model.fit(X_train, y_train, epochs=50, batch_size=8, verbose=0,
+                  validation_split=0.1)
+    except ModuleNotFoundError as e:
+        if 'tensorflow' in str(e).lower():
+            print("TensorFlow is not available. Using fallback prediction.")
+            return generate_fallback_prediction(prices, sentiment_score)
+        raise
+    except Exception as e:
+        print(f"LSTM training failed ({e}). Using fallback prediction.")
+        return generate_fallback_prediction(prices, sentiment_score)
 
     y_pred_proba = model.predict(X_test, verbose=0)
     y_pred = (y_pred_proba > 0.5).astype(int).flatten()

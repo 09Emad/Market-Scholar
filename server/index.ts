@@ -71,8 +71,22 @@ app.use((req, res, next) => {
 
 function detectPythonCommand(): string {
   const isWindows = platform() === "win32";
+  const explicitPython = process.env.ML_PYTHON_CMD;
+  if (explicitPython) {
+    try {
+      execSync(`"${explicitPython}" --version`, { stdio: "ignore" });
+      return explicitPython;
+    } catch {}
+  }
+
   const venvPaths = isWindows
-    ? ["venv\\Scripts\\python.exe", ".venv\\Scripts\\python.exe"]
+    ? [
+        "venv\\Scripts\\python.exe",
+        ".venv\\Scripts\\python.exe",
+        ".venv311\\Scripts\\python.exe",
+        "python_ml\\venv\\Scripts\\python.exe",
+        "python_ml\\.venv\\Scripts\\python.exe",
+      ]
     : ["venv/bin/python", ".venv/bin/python"];
   const globalCmds = isWindows ? ["python", "python3"] : ["python3", "python"];
   const allCmds = [...venvPaths, ...globalCmds];
