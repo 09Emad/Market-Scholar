@@ -64,10 +64,21 @@ export async function getStockQuote(symbol: string): Promise<StockQuote> {
   }
 }
 
+const historyCache = new Map<string, { timestamp: number; data: any }>();
+
 export async function getStockHistory(
   symbol: string,
   range: string
 ): Promise<Array<{ date: string; close: number; open: number; high: number; low: number; volume: number }>> {
+  const cacheKey = `${symbol}:${range}`;
+  const cached = historyCache.get(cacheKey);
+  const now = Date.now();
+  const ttl = range === "1d" ? 60 * 1000 : 30 * 60 * 1000; // 1 minute for intraday, 30 minutes for daily history
+
+  if (cached && now - cached.timestamp < ttl) {
+    return cached.data;
+  }
+
   const rangeMap: Record<string, { range: string; interval: string }> = {
     "1d": { range: "1d", interval: "2m" },
     "1w": { range: "5d", interval: "15m" },
@@ -90,7 +101,7 @@ export async function getStockHistory(
     const timestamps = result.timestamp || [];
     const quotes = result.indicators?.quote?.[0] || {};
 
-    return timestamps.map((ts: number, i: number) => {
+    const history = timestamps.map((ts: number, i: number) => {
       const d = new Date(ts * 1000);
       let dateStr: string;
       if (range === "1d" || range === "1w") {
@@ -108,6 +119,9 @@ export async function getStockHistory(
         volume: quotes.volume?.[i] ?? 0,
       };
     }).filter((d: any) => d.close > 0);
+
+    historyCache.set(cacheKey, { timestamp: now, data: history });
+    return history;
   } catch (error: any) {
     console.error(`Error fetching history for ${symbol}:`, error.message);
     return [];

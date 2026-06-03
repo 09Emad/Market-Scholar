@@ -7,11 +7,12 @@ import cron from 'node-cron'; // المكتبة التي قمت بتثبيتها
 import { performValidationLogic, lastActiveTime } from './routes'; // استيراد الوظائف من الملف الذي عدلناه
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { setupAuth } from "./auth";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { spawn, execSync } from "child_process";
 import { platform } from "os";
-import { waitForMLService } from "./prediction-service";
+import { waitForMLService, generatePrediction } from "./prediction-service";
 
 const app = express();
 const httpServer = createServer(app);
@@ -70,6 +71,13 @@ app.use((req, res, next) => {
 });
 
 function detectPythonCommand(): string {
+  if (process.env.ML_PYTHON_CMD) {
+    try {
+      execSync(`"${process.env.ML_PYTHON_CMD}" --version`, { stdio: "ignore" });
+      return process.env.ML_PYTHON_CMD;
+    } catch {}
+  }
+
   const isWindows = platform() === "win32";
   const explicitPython = process.env.ML_PYTHON_CMD;
   if (explicitPython) {
@@ -132,6 +140,25 @@ function startMLService() {
   return mlProcess;
 }
 
+const POPULAR_SYMBOLS = [
+  "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "JPM",
+  "V", "JNJ", "WMT", "PG", "MA", "UNH", "DIS", "NFLX", "AMD", "INTC", "BA", "PYPL"
+];
+
+async function preWarmCache() {
+  log("Starting sequential cache pre-warming for all 20 popular stocks...", "pre-warm");
+  for (const symbol of POPULAR_SYMBOLS) {
+    try {
+      log(`Pre-warming cache for ${symbol}...`, "pre-warm");
+      await generatePrediction(symbol);
+      log(`Successfully pre-warmed cache for ${symbol}.`, "pre-warm");
+    } catch (error: any) {
+      log(`Failed to pre-warm cache for ${symbol}: ${error.message}`, "pre-warm");
+    }
+  }
+  log("Cache pre-warming completed for all stocks.", "pre-warm");
+}
+
 (async () => {
   startMLService();
   log("Python ML service starting on port 5001...");
@@ -139,11 +166,13 @@ function startMLService() {
   waitForMLService(60).then((ready) => {
     if (ready) {
       log("ML service health check passed - predictions will use real LSTM model");
+      preWarmCache();
     } else {
       log("ML service health check failed - predictions will use fallback until service is available");
     }
   });
 
+  setupAuth(app);
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
@@ -172,7 +201,7 @@ function startMLService() {
   const isReplit = !!process.env.REPL_ID;
   const defaultPort = isReplit ? "5000" : "3000";
   const port = parseInt(process.env.PORT || defaultPort, 10);
-  const host = isReplit ? "0.0.0.0" : "127.0.0.1";
+  const host = "0.0.0.0";
   const listenOptions: any = { port, host };
   if (isReplit) {
     listenOptions.reusePort = true;
@@ -198,6 +227,17 @@ cron.schedule('*/30 * * * * *', async () => {
     log("System idle: Skipping background validation.", "cron");
   }
 });
+
+// Cron job to pre-warm cache daily at 10:00 PM UTC (safely after US market close, Mon-Fri)
+cron.schedule('0 22 * * 1-5', async () => {
+  log("Running daily scheduled cache pre-warming...", "cron");
+  try {
+    await preWarmCache();
+  } catch (error) {
+    log(`Error during scheduled cache pre-warming: ${error}`, "cron");
+  }
+});
+
 httpServer.listen(listenOptions, () => {
     log(`serving on port ${port}`);
   });

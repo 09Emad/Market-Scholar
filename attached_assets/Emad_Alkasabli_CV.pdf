@@ -1,0 +1,117 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Length 1612 >>
+stream
+BT
+/F1 12 Tf
+48 794 Td
+16 TL
+(Emad Alkasabli) Tj
+T*
+(AI Engineer) Tj
+T*
+(Emadalkasabli@gmail.com) Tj
+T*
+(www.linkedin.com/in/emad-alkasabli) Tj
+T*
+(github.com/09Emad) Tj
+T*
+() Tj
+T*
+(Professional Summary) Tj
+T*
+(Software Engineering student with hands-on experience in AI backend engineering,) Tj
+T*
+(chatbot development, prompt engineering, and modern frontend workflows.) Tj
+T*
+(Comfortable building practical AI-powered systems using Flask, Express.js,) Tj
+T*
+(TypeScript, Docker, and PostgreSQL.) Tj
+T*
+() Tj
+T*
+(Technical Skills) Tj
+T*
+(RAG Engineering) Tj
+T*
+(Prompt Engineering) Tj
+T*
+(AI Backend Development) Tj
+T*
+(Frontend Development) Tj
+T*
+(Flask) Tj
+T*
+(Express.js) Tj
+T*
+(TypeScript) Tj
+T*
+(Docker) Tj
+T*
+(PostgreSQL) Tj
+T*
+(LLM Fine-tuning) Tj
+T*
+() Tj
+T*
+(Experience / Projects) Tj
+T*
+(Developed a Flask backend serving RESTful endpoints for real-time AI inference) Tj
+T*
+(with containerized deployment using Docker.) Tj
+T*
+(Built a full application stack with TypeScript frontend, Express.js REST API,) Tj
+T*
+(Python Flask ML microservice, and PostgreSQL.) Tj
+T*
+(Created a real-time news sentiment analysis project using VADER on Yahoo) Tj
+T*
+(Finance data with model evaluation metrics.) Tj
+T*
+(Engineered TF-IDF text features from video titles and tags.) Tj
+T*
+(Applied temporal feature engineering on publish metadata.) Tj
+T*
+() Tj
+T*
+(Education) Tj
+T*
+(Bachelor of Software Engineering) Tj
+T*
+() Tj
+T*
+(Certificates) Tj
+T*
+(IBM Generative AI Engineering Professional Certificate) Tj
+T*
+(Meta Front-End Developer Professional Certificate) Tj
+T*
+(Prompt Engineering and LLM Fine-tuning) Tj
+ET
+endstream
+endobj
+3 0 obj
+<< /Type /Page /Parent 4 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 2 0 R >>
+endobj
+4 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+5 0 obj
+<< /Type /Catalog /Pages 4 0 R >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000079 00000 n 
+0000001743 00000 n 
+0000001869 00000 n 
+0000001926 00000 n 
+trailer
+<< /Size 6 /Root 5 0 R >>
+startxref
+1975
+%%EOF

@@ -1,16 +1,32 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-toggle";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { useEffect } from "react";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
+import AuthPage from "@/pages/auth-page";
+
+function Redirect({ to }: { to: string }) {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation(to);
+  }, [to]);
+  return null;
+}
 
 function Router() {
+  const { user } = useAuth();
+
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
+      <Route path="/auth">
+        {user ? <Redirect to="/" /> : <AuthPage />}
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
@@ -21,8 +37,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <ThemeProvider>
-          <Toaster />
-          <Router />
+          <AuthProvider>
+            <Toaster />
+            <Router />
+          </AuthProvider>
         </ThemeProvider>
       </TooltipProvider>
     </QueryClientProvider>

@@ -1,0 +1,158 @@
+{
+  "direction": "down",
+  "confidence": 0.549,
+  "model_metrics": {
+    "accuracy": 0.5106,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1_score": 0.0
+  },
+  "feature_importance": [
+    {
+      "feature": "RSI Indicator",
+      "importance": 0.1169
+    },
+    {
+      "feature": "Momentum",
+      "importance": 0.1158
+    },
+    {
+      "feature": "News Sentiment",
+      "importance": 0.1139
+    },
+    {
+      "feature": "Price Returns",
+      "importance": 0.1117
+    },
+    {
+      "feature": "MACD Histogram",
+      "importance": 0.1113
+    },
+    {
+      "feature": "Volume Change",
+      "importance": 0.1097
+    },
+    {
+      "feature": "Volatility",
+      "importance": 0.1081
+    },
+    {
+      "feature": "Moving Average Ratio",
+      "importance": 0.1068
+    },
+    {
+      "feature": "Price Range",
+      "importance": 0.1058
+    }
+  ],
+  "factors": {
+    "technical_score": 0.5072,
+    "sentiment_score": 0.6505,
+    "volume_signal": "Normal volume",
+    "price_action": "Slight upward trend",
+    "news_impact": "Strong positive news sentiment"
+  },
+  "analysis_report": [
+    {
+      "title": "Summary",
+      "icon": "summary",
+      "content": "Based on LSTM neural network analysis of DIS's recent market data, the model predicts an downward price movement for the next trading day with low confidence (55%). This prediction is derived from a combination of technical indicators, price momentum, trading volume patterns, and news sentiment analysis."
+    },
+    {
+      "title": "Price Action & Trend",
+      "icon": "trend",
+      "content": "DIS has shown a slight upward trend recently, with a modest average daily return of +0.07%. Over the last 20 trading sessions, the stock moved from $100.48 to $101.41 (+0.93%). The technical score of 51% suggests a neutral technical outlook."
+    },
+    {
+      "title": "Volume Analysis",
+      "icon": "volume",
+      "content": "Trading volume is near the average level (ratio: 0.88x), suggesting normal market participation. This indicates steady interest without extreme buying or selling pressure."
+    },
+    {
+      "title": "News Sentiment",
+      "icon": "news",
+      "content": "News sentiment analysis (TF-IDF + VADER) shows a strongly positive sentiment score of 65%. Recent news coverage for DIS has been predominantly favorable, which historically correlates with positive price movements."
+    },
+    {
+      "title": "Key Drivers",
+      "icon": "drivers",
+      "content": "The LSTM model identified the most influential factors for this prediction as: RSI Indicator (12%), Momentum (12%), News Sentiment (11%). RSI Indicator is the most significant factor in the model's decision-making process."
+    },
+    {
+      "title": "Model Confidence",
+      "icon": "model",
+      "content": "The LSTM model achieved 51% accuracy and 0% F1-score on the test dataset. These metrics indicate limited predictive reliability. Stock markets are inherently unpredictable, and predictions should be treated with caution. This model is designed for educational and research purposes only and should not be used as the sole basis for investment decisions."
+    }
+  ],
+  "explain_payload": {
+    "symbol": "DIS",
+    "lstm_direction": "down",
+    "lstm_confidence": 0.549,
+    "technical_score": 0.5072,
+    "price_action": "Slight upward trend",
+    "volume_signal": "Normal volume",
+    "sentiment_score": 0.6505,
+    "news_impact": "Strong positive news sentiment",
+    "top_feature_importance": [
+      {
+        "feature": "RSI Indicator",
+        "importance": 0.1169
+      },
+      {
+        "feature": "Momentum",
+        "importance": 0.1158
+      },
+      {
+        "feature": "News Sentiment",
+        "importance": 0.1139
+      }
+    ],
+    "recent_news": [
+      {
+        "title": "AT&T Brings Connection to Life Through New Campaign Inspired by Disney and Pixar's \"Toy Story 5\"",
+        "source": "PR Newswire",
+        "publishedAt": "2026-06-03T11:00:00.000Z"
+      },
+      {
+        "title": "A Look At Disney (DIS) Valuation As Shares Struggle And Streaming And Experiences Drive New Growth Hopes",
+        "source": "Simply Wall St.",
+        "publishedAt": "2026-06-03T03:10:43.000Z"
+      },
+      {
+        "title": "Ingenia.ai Appoints Nicolas van Dyk as Chief Executive Officer and Member of the Board of Directors",
+        "source": "PR Newswire",
+        "publishedAt": "2026-06-02T16:00:00.000Z"
+      },
+      {
+        "title": "Family Offices Bypass Private Equity and Go Direct",
+        "source": "Barrons.com",
+        "publishedAt": "2026-06-02T14:21:00.000Z"
+      },
+      {
+        "title": "Is The Walt Disney Company (DIS) One of the Best Inexpensive Stocks to Invest in Right Now?",
+        "source": "Insider Monkey",
+        "publishedAt": "2026-06-02T14:13:19.000Z"
+      }
+    ]
+  },
+  "model_info": {
+    "algorithm": "LSTM (Long Short-Term Memory)",
+    "text_processing": "TF-IDF + VADER Sentiment",
+    "features_used": [
+      "Price Returns",
+      "Moving Average Ratio",
+      "Volatility",
+      "Volume Change",
+      "Price Range",
+      "Momentum",
+      "News Sentiment",
+      "RSI Indicator",
+      "MACD Histogram"
+    ],
+    "training_samples": 188,
+    "test_samples": 47,
+    "sequence_length": 7,
+    "epochs": 50
+  },
+  "symbol": "DIS"
+}

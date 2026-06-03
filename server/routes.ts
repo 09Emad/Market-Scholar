@@ -77,6 +77,13 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  const requireAuth = (req: any, res: any, next: any) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    next();
+  };
+
   // --- مسارات الأسهم (Stock Routes) ---
   app.get("/api/stock/quote/:symbol", async (req, res) => {
     try {
@@ -152,7 +159,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/stock/predict", async (req, res) => {
+  app.post("/api/stock/predict", requireAuth, async (req, res) => {
     try {
       const { symbol } = req.body;
       const prediction = await generatePrediction(symbol.toUpperCase());
@@ -203,7 +210,7 @@ export async function registerRoutes(
   });
 
   // مسار الـ Validate (الآن يستدعي الوظيفة العامة)
-  app.post("/api/predictions/validate", async (_req, res) => {
+  app.post("/api/predictions/validate", requireAuth, async (_req, res) => {
     try {
       const result = await performValidationLogic();
       res.json(result);

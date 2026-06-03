@@ -6,10 +6,12 @@ vite.config.ts.*
 *.tar.gz
 venv/
 .venv311/
-.env
+.venv/
 __pycache__/
+python_ml/__pycache__/
 *.pyc
 *.pyo
 *.pyd
 attached_assets/
 .vscode/
+.env

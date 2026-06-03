@@ -1,0 +1,158 @@
+{
+  "direction": "down",
+  "confidence": 0.567,
+  "model_metrics": {
+    "accuracy": 0.4468,
+    "precision": 0.4118,
+    "recall": 0.3043,
+    "f1_score": 0.35
+  },
+  "feature_importance": [
+    {
+      "feature": "Momentum",
+      "importance": 0.1172
+    },
+    {
+      "feature": "Price Range",
+      "importance": 0.1137
+    },
+    {
+      "feature": "Price Returns",
+      "importance": 0.1135
+    },
+    {
+      "feature": "Volume Change",
+      "importance": 0.1131
+    },
+    {
+      "feature": "Moving Average Ratio",
+      "importance": 0.1121
+    },
+    {
+      "feature": "News Sentiment",
+      "importance": 0.1105
+    },
+    {
+      "feature": "Volatility",
+      "importance": 0.1096
+    },
+    {
+      "feature": "RSI Indicator",
+      "importance": 0.107
+    },
+    {
+      "feature": "MACD Histogram",
+      "importance": 0.1034
+    }
+  ],
+  "factors": {
+    "technical_score": 0.4799,
+    "sentiment_score": 0.6036,
+    "volume_signal": "High volume - above average",
+    "price_action": "Slight downward trend",
+    "news_impact": "Moderately positive news"
+  },
+  "analysis_report": [
+    {
+      "title": "Summary",
+      "icon": "summary",
+      "content": "Based on LSTM neural network analysis of MA's recent market data, the model predicts an downward price movement for the next trading day with low confidence (57%). This prediction is derived from a combination of technical indicators, price momentum, trading volume patterns, and news sentiment analysis."
+    },
+    {
+      "title": "Price Action & Trend",
+      "icon": "trend",
+      "content": "MA has shown a slight downward trend recently, with an average daily return of -0.2%. Over the last 20 trading sessions, the stock moved from $497.08 to $477.68 (-3.9%). The technical score of 48% suggests a neutral technical outlook."
+    },
+    {
+      "title": "Volume Analysis",
+      "icon": "volume",
+      "content": "Trading volume is significantly above average (ratio: 1.36x), indicating strong market interest and conviction behind the current price movement. High volume typically confirms the prevailing trend direction."
+    },
+    {
+      "title": "News Sentiment",
+      "icon": "news",
+      "content": "News sentiment analysis shows a moderately positive score of 60%. Recent news about MA leans positive, suggesting generally favorable market perception, though not overwhelmingly bullish."
+    },
+    {
+      "title": "Key Drivers",
+      "icon": "drivers",
+      "content": "The LSTM model identified the most influential factors for this prediction as: Momentum (12%), Price Range (11%), Price Returns (11%). Price momentum is the dominant driver, indicating the model is primarily following the recent trend direction."
+    },
+    {
+      "title": "Model Confidence",
+      "icon": "model",
+      "content": "The LSTM model achieved 45% accuracy and 35% F1-score on the test dataset. These metrics indicate limited predictive reliability. Stock markets are inherently unpredictable, and predictions should be treated with caution. This model is designed for educational and research purposes only and should not be used as the sole basis for investment decisions."
+    }
+  ],
+  "explain_payload": {
+    "symbol": "MA",
+    "lstm_direction": "down",
+    "lstm_confidence": 0.567,
+    "technical_score": 0.4799,
+    "price_action": "Slight downward trend",
+    "volume_signal": "High volume - above average",
+    "sentiment_score": 0.6036,
+    "news_impact": "Moderately positive news",
+    "top_feature_importance": [
+      {
+        "feature": "Momentum",
+        "importance": 0.1172
+      },
+      {
+        "feature": "Price Range",
+        "importance": 0.1137
+      },
+      {
+        "feature": "Price Returns",
+        "importance": 0.1135
+      }
+    ],
+    "recent_news": [
+      {
+        "title": "3 Outstanding Dividend Stocks to Buy on the Dip and Hold for 10 Years",
+        "source": "Motley Fool",
+        "publishedAt": "2026-06-03T10:50:00.000Z"
+      },
+      {
+        "title": "Top 20 global payment companies’ revenue rises 8% in 2025 as scale still wins: GlobalData",
+        "source": "Electronic Payments",
+        "publishedAt": "2026-06-03T10:05:44.000Z"
+      },
+      {
+        "title": "Berkshire Hathaway Made Some Major Portfolio Moves, but This One Was a Head-Scratcher. How Should Investors Take It?",
+        "source": "Motley Fool",
+        "publishedAt": "2026-06-03T07:25:00.000Z"
+      },
+      {
+        "title": "Analyst Report: Mastercard Incorporated",
+        "source": "Morningstar Research",
+        "publishedAt": "2026-06-02T23:08:41.000Z"
+      },
+      {
+        "title": "Payment sovereignty and the relationship with cash",
+        "source": "Electronic Payments",
+        "publishedAt": "2026-06-02T19:55:34.000Z"
+      }
+    ]
+  },
+  "model_info": {
+    "algorithm": "LSTM (Long Short-Term Memory)",
+    "text_processing": "TF-IDF + VADER Sentiment",
+    "features_used": [
+      "Price Returns",
+      "Moving Average Ratio",
+      "Volatility",
+      "Volume Change",
+      "Price Range",
+      "Momentum",
+      "News Sentiment",
+      "RSI Indicator",
+      "MACD Histogram"
+    ],
+    "training_samples": 188,
+    "test_samples": 47,
+    "sequence_length": 7,
+    "epochs": 50
+  },
+  "symbol": "MA"
+}

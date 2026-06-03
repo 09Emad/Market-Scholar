@@ -1,0 +1,158 @@
+{
+  "direction": "up",
+  "confidence": 0.5266,
+  "model_metrics": {
+    "accuracy": 0.6596,
+    "precision": 0.6596,
+    "recall": 1.0,
+    "f1_score": 0.7949
+  },
+  "feature_importance": [
+    {
+      "feature": "Momentum",
+      "importance": 0.1156
+    },
+    {
+      "feature": "Volatility",
+      "importance": 0.115
+    },
+    {
+      "feature": "Volume Change",
+      "importance": 0.1132
+    },
+    {
+      "feature": "News Sentiment",
+      "importance": 0.1127
+    },
+    {
+      "feature": "Price Returns",
+      "importance": 0.1109
+    },
+    {
+      "feature": "Moving Average Ratio",
+      "importance": 0.1097
+    },
+    {
+      "feature": "MACD Histogram",
+      "importance": 0.1096
+    },
+    {
+      "feature": "Price Range",
+      "importance": 0.1072
+    },
+    {
+      "feature": "RSI Indicator",
+      "importance": 0.1061
+    }
+  ],
+  "factors": {
+    "technical_score": 0.7192,
+    "sentiment_score": 0.5488,
+    "volume_signal": "Low volume - below average",
+    "price_action": "Strong upward trend",
+    "news_impact": "Mixed/neutral news sentiment"
+  },
+  "analysis_report": [
+    {
+      "title": "Summary",
+      "icon": "summary",
+      "content": "Based on LSTM neural network analysis of AMD's recent market data, the model predicts an upward price movement for the next trading day with low confidence (53%). This prediction is derived from a combination of technical indicators, price momentum, trading volume patterns, and news sentiment analysis."
+    },
+    {
+      "title": "Price Action & Trend",
+      "icon": "trend",
+      "content": "AMD has shown a strong upward trend over the recent period, with an average daily return of +2.19%. Over the last 20 trading sessions, the stock moved from $355.26 to $521.54 (+46.81%). The technical score of 72% indicates bullish momentum."
+    },
+    {
+      "title": "Volume Analysis",
+      "icon": "volume",
+      "content": "Trading volume is below average (ratio: 0.62x), indicating reduced market participation. Low volume may suggest uncertainty or a potential consolidation phase."
+    },
+    {
+      "title": "News Sentiment",
+      "icon": "news",
+      "content": "News sentiment analysis shows a neutral score of 55%. Recent news coverage about AMD is mixed, with balanced positive and negative reports. A neutral sentiment suggests the market is undecided about future direction."
+    },
+    {
+      "title": "Key Drivers",
+      "icon": "drivers",
+      "content": "The LSTM model identified the most influential factors for this prediction as: Momentum (12%), Volatility (12%), Volume Change (11%). Price momentum is the dominant driver, indicating the model is primarily following the recent trend direction."
+    },
+    {
+      "title": "Model Confidence",
+      "icon": "model",
+      "content": "The LSTM model achieved 66% accuracy and 79% F1-score on the test dataset. These metrics suggest reasonable predictive performance, though past performance does not guarantee future accuracy. This model is designed for educational and research purposes only and should not be used as the sole basis for investment decisions."
+    }
+  ],
+  "explain_payload": {
+    "symbol": "AMD",
+    "lstm_direction": "up",
+    "lstm_confidence": 0.5266,
+    "technical_score": 0.7192,
+    "price_action": "Strong upward trend",
+    "volume_signal": "Low volume - below average",
+    "sentiment_score": 0.5488,
+    "news_impact": "Mixed/neutral news sentiment",
+    "top_feature_importance": [
+      {
+        "feature": "Momentum",
+        "importance": 0.1156
+      },
+      {
+        "feature": "Volatility",
+        "importance": 0.115
+      },
+      {
+        "feature": "Volume Change",
+        "importance": 0.1132
+      }
+    ],
+    "recent_news": [
+      {
+        "title": "Astera Labs Expands Taiwan Operations to Participate in Global AI Infrastructure Buildout",
+        "source": "MT Newswires",
+        "publishedAt": "2026-06-03T08:37:11.000Z"
+      },
+      {
+        "title": "AMD Helios Rack Platform Puts AI Data Center Ambitions Against Nvidia",
+        "source": "Simply Wall St.",
+        "publishedAt": "2026-06-03T03:09:32.000Z"
+      },
+      {
+        "title": "Why Semtech (SMTC) Stock Is Trading Up Today",
+        "source": "StockStory",
+        "publishedAt": "2026-06-02T23:49:23.000Z"
+      },
+      {
+        "title": "3 Overvalued AI Stocks I Would Stay Far Away From",
+        "source": "Motley Fool",
+        "publishedAt": "2026-06-02T21:20:00.000Z"
+      },
+      {
+        "title": "Advanced Micro Devices Sees Agentic AI Doubling CPU Opportunity as MI450 Nears",
+        "source": "MarketBeat",
+        "publishedAt": "2026-06-02T21:04:34.000Z"
+      }
+    ]
+  },
+  "model_info": {
+    "algorithm": "LSTM (Long Short-Term Memory)",
+    "text_processing": "TF-IDF + VADER Sentiment",
+    "features_used": [
+      "Price Returns",
+      "Moving Average Ratio",
+      "Volatility",
+      "Volume Change",
+      "Price Range",
+      "Momentum",
+      "News Sentiment",
+      "RSI Indicator",
+      "MACD Histogram"
+    ],
+    "training_samples": 188,
+    "test_samples": 47,
+    "sequence_length": 7,
+    "epochs": 50
+  },
+  "symbol": "AMD"
+}
