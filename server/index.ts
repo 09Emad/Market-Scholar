@@ -187,7 +187,7 @@ async function preWarmCache() {
   const isReplit = !!process.env.REPL_ID;
   const defaultPort = isReplit ? "5000" : "3000";
   const port = parseInt(process.env.PORT || defaultPort, 10);
-  const host = isReplit ? "0.0.0.0" : "127.0.0.1";
+  const host = "0.0.0.0";
   const listenOptions: any = { port, host };
   if (isReplit) {
     listenOptions.reusePort = true;

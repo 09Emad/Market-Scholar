@@ -852,4 +852,4 @@ if __name__ == '__main__':
     port = int(os.environ.get('ML_SERVICE_PORT', 5001))
     print(f"StockVision ML Service starting on port {port}...")
     print(f"Using LSTM + TF-IDF models for stock prediction")
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='127.0.0.1', port=port, debug=False)
