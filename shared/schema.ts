@@ -11,6 +11,7 @@ export const users = pgTable("users", {
 
 export const predictions = pgTable("predictions", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: text("user_id").references(() => users.id),
   symbol: text("symbol").notNull(),
   predictionDate: timestamp("prediction_date").notNull().defaultNow(),
   targetDate: text("target_date").notNull(),
