@@ -110,6 +110,7 @@ function CandlestickSVG({
   showMA50,
   showRSI,
   isDark,
+  viewType,
 }: {
   data: ChartEntry[];
   width: number;
@@ -121,6 +122,7 @@ function CandlestickSVG({
   showMA50: boolean;
   showRSI: boolean;
   isDark: boolean;
+  viewType: "candles" | "glow";
 }) {
   const theme = getChartTheme(isDark);
   const margin = { top: 8, right: 70, bottom: 28, left: 8 };
@@ -168,6 +170,9 @@ function CandlestickSVG({
   const currentPriceY = priceScale(lastPrice);
   const currentPriceColor = isLastUp ? CANDLE_GREEN : CANDLE_RED;
 
+  const isUpTrend = data.length > 0 && data[data.length - 1].close >= data[0].close;
+  const glowColor = isUpTrend ? CANDLE_GREEN : CANDLE_RED;
+
   const hoveredEntry = hoveredIndex !== null ? data[hoveredIndex] : null;
   const hoveredX = hoveredIndex !== null ? margin.left + hoveredIndex * barGap + barGap / 2 : 0;
   const hoveredY = hoveredEntry ? priceScale(hoveredEntry.close) : 0;
@@ -199,6 +204,42 @@ function CandlestickSVG({
     return path;
   };
 
+  const buildLinePath = () => {
+    let path = "";
+    let started = false;
+    for (let i = 0; i < data.length; i++) {
+      const x = margin.left + i * barGap + barGap / 2;
+      const y = priceScale(data[i].close);
+      if (!started) {
+        path += `M${x},${y}`;
+        started = true;
+      } else {
+        path += `L${x},${y}`;
+      }
+    }
+    return path;
+  };
+
+  const buildAreaPath = () => {
+    if (data.length === 0) return "";
+    let path = "";
+    let started = false;
+    const yBottom = volBottom;
+    for (let i = 0; i < data.length; i++) {
+      const x = margin.left + i * barGap + barGap / 2;
+      const y = priceScale(data[i].close);
+      if (!started) {
+        path += `M${x},${yBottom} L${x},${y}`;
+        started = true;
+      } else {
+        path += `L${x},${y}`;
+      }
+    }
+    const lastX = margin.left + (data.length - 1) * barGap + barGap / 2;
+    path += `L${lastX},${yBottom} Z`;
+    return path;
+  };
+
   const rsiTop = volBottom + rsiGap;
   const rsiBottom = rsiTop + rsiHeight;
   const rsiScale = (val: number) => rsiTop + ((100 - val) / 100) * rsiHeight;
@@ -227,8 +268,20 @@ function CandlestickSVG({
 
   const totalBottom = showRSI ? rsiBottom : volBottom;
 
+  const lastX = margin.left + (data.length - 1) * barGap + barGap / 2;
+  const lastY = priceScale(data[data.length - 1].close);
+
   return (
     <svg width={width} height={height} className="select-none" style={{ backgroundColor: theme.bg }}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes chartPulse {
+          0% { r: 3px; opacity: 0.9; }
+          100% { r: 12px; opacity: 0; }
+        }
+        .chart-pulse-dot {
+          animation: chartPulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+        }
+      ` }} />
       <defs>
         <clipPath id="chartArea">
           <rect x={margin.left} y={margin.top} width={chartWidth} height={priceHeight + 4 + volumeHeight} />
@@ -236,6 +289,28 @@ function CandlestickSVG({
         <clipPath id="rsiArea">
           <rect x={margin.left} y={rsiTop} width={chartWidth} height={rsiHeight} />
         </clipPath>
+        <filter id="neon-glow-green" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <filter id="neon-glow-red" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <linearGradient id="gradient-green" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={CANDLE_GREEN} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={CANDLE_GREEN} stopOpacity="0.0" />
+        </linearGradient>
+        <linearGradient id="gradient-red" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={CANDLE_RED} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={CANDLE_RED} stopOpacity="0.0" />
+        </linearGradient>
       </defs>
 
       {priceTicks.map((tick, i) => {
@@ -254,24 +329,79 @@ function CandlestickSVG({
       <line x1={chartRight} y1={margin.top} x2={chartRight} y2={totalBottom} stroke={theme.grid} strokeWidth={1} />
 
       <g clipPath="url(#chartArea)">
+        {/* Render Volume in background (faded if glow mode is active) */}
         {data.map((d, i) => {
           const x = margin.left + i * barGap + barGap / 2;
-          const color = d.isUp ? CANDLE_GREEN : CANDLE_RED;
-          const bodyTop = priceScale(d.isUp ? d.close : d.open);
-          const bodyBottom = priceScale(d.isUp ? d.open : d.close);
-          const bodyH = Math.max(1, bodyBottom - bodyTop);
-          const wickTop = priceScale(d.high);
-          const wickBottom = priceScale(d.low);
           const volTop = volScale(d.volume);
-
           return (
-            <g key={`candle-${i}`}>
-              <rect x={x - candleWidth / 2} y={volTop} width={candleWidth} height={Math.max(0, volBottom - volTop)} fill={d.isUp ? theme.volumeUp : theme.volumeDown} />
-              <line x1={x} y1={wickTop} x2={x} y2={wickBottom} stroke={color} strokeWidth={1} />
-              <rect x={x - candleWidth / 2} y={bodyTop} width={candleWidth} height={bodyH} fill={color} />
-            </g>
+            <rect
+              key={`vol-${i}`}
+              x={x - candleWidth / 2}
+              y={volTop}
+              width={candleWidth}
+              height={Math.max(0, volBottom - volTop)}
+              fill={d.isUp ? theme.volumeUp : theme.volumeDown}
+              opacity={viewType === "glow" ? 0.3 : 1}
+            />
           );
         })}
+
+        {viewType === "candles" ? (
+          // Traditional Candlestick view
+          data.map((d, i) => {
+            const x = margin.left + i * barGap + barGap / 2;
+            const color = d.isUp ? CANDLE_GREEN : CANDLE_RED;
+            const bodyTop = priceScale(d.isUp ? d.close : d.open);
+            const bodyBottom = priceScale(d.isUp ? d.open : d.close);
+            const bodyH = Math.max(1, bodyBottom - bodyTop);
+            const wickTop = priceScale(d.high);
+            const wickBottom = priceScale(d.low);
+
+            return (
+              <g key={`candle-${i}`}>
+                <line x1={x} y1={wickTop} x2={x} y2={wickBottom} stroke={color} strokeWidth={1} />
+                <rect x={x - candleWidth / 2} y={bodyTop} width={candleWidth} height={bodyH} fill={color} />
+              </g>
+            );
+          })
+        ) : (
+          // Futuristic Glow Line & Area view
+          <>
+            <path
+              d={buildAreaPath()}
+              fill={isUpTrend ? "url(#gradient-green)" : "url(#gradient-red)"}
+              pointerEvents="none"
+            />
+            <path
+              d={buildLinePath()}
+              fill="none"
+              stroke={glowColor}
+              strokeWidth={2.5}
+              filter={isUpTrend ? "url(#neon-glow-green)" : "url(#neon-glow-red)"}
+              pointerEvents="none"
+            />
+            {data.length > 0 && (
+              <g pointerEvents="none">
+                {/* Glowing target point */}
+                <circle
+                  cx={lastX}
+                  cy={lastY}
+                  r={4}
+                  fill={glowColor}
+                />
+                <circle
+                  cx={lastX}
+                  cy={lastY}
+                  r={6}
+                  fill="none"
+                  stroke={glowColor}
+                  strokeWidth={2}
+                  className="chart-pulse-dot"
+                />
+              </g>
+            )}
+          </>
+        )}
 
         {showMA20 && ma20.length > 0 && (
           <path d={buildMAPath(ma20)} fill="none" stroke={MA20_COLOR} strokeWidth={1.5} opacity={0.9} />
@@ -359,6 +489,7 @@ export function PriceChart({
   const [showMA20, setShowMA20] = useState(true);
   const [showMA50, setShowMA50] = useState(false);
   const [showRSI, setShowRSI] = useState(false);
+  const [viewType, setViewType] = useState<"candles" | "glow">("candles");
 
   useEffect(() => {
     const el = containerRef.current;
@@ -471,37 +602,58 @@ export function PriceChart({
         </div>
       </CardHeader>
 
-      <div className="flex items-center gap-1 px-4 pb-1 flex-wrap">
-        <Button
-          data-testid="button-indicator-ma20"
-          variant={showMA20 ? "default" : "outline"}
-          size="sm"
-          className="text-xs h-6 px-2"
-          onClick={() => setShowMA20(!showMA20)}
-          style={showMA20 ? { backgroundColor: MA20_COLOR, borderColor: MA20_COLOR } : {}}
-        >
-          MA 20
-        </Button>
-        <Button
-          data-testid="button-indicator-ma50"
-          variant={showMA50 ? "default" : "outline"}
-          size="sm"
-          className="text-xs h-6 px-2"
-          onClick={() => setShowMA50(!showMA50)}
-          style={showMA50 ? { backgroundColor: MA50_COLOR, borderColor: MA50_COLOR } : {}}
-        >
-          MA 50
-        </Button>
-        <Button
-          data-testid="button-indicator-rsi"
-          variant={showRSI ? "default" : "outline"}
-          size="sm"
-          className="text-xs h-6 px-2"
-          onClick={() => setShowRSI(!showRSI)}
-          style={showRSI ? { backgroundColor: RSI_LINE_COLOR, borderColor: RSI_LINE_COLOR } : {}}
-        >
-          RSI
-        </Button>
+      <div className="flex items-center justify-between px-4 pb-1 flex-wrap gap-2">
+        <div className="flex items-center gap-1 flex-wrap">
+          <Button
+            data-testid="button-indicator-ma20"
+            variant={showMA20 ? "default" : "outline"}
+            size="sm"
+            className="text-xs h-6 px-2"
+            onClick={() => setShowMA20(!showMA20)}
+            style={showMA20 ? { backgroundColor: MA20_COLOR, borderColor: MA20_COLOR } : {}}
+          >
+            MA 20
+          </Button>
+          <Button
+            data-testid="button-indicator-ma50"
+            variant={showMA50 ? "default" : "outline"}
+            size="sm"
+            className="text-xs h-6 px-2"
+            onClick={() => setShowMA50(!showMA50)}
+            style={showMA50 ? { backgroundColor: MA50_COLOR, borderColor: MA50_COLOR } : {}}
+          >
+            MA 50
+          </Button>
+          <Button
+            data-testid="button-indicator-rsi"
+            variant={showRSI ? "default" : "outline"}
+            size="sm"
+            className="text-xs h-6 px-2"
+            onClick={() => setShowRSI(!showRSI)}
+            style={showRSI ? { backgroundColor: RSI_LINE_COLOR, borderColor: RSI_LINE_COLOR } : {}}
+          >
+            RSI
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-1 bg-muted p-0.5 rounded-lg border border-border/40">
+          <Button
+            variant={viewType === "candles" ? "secondary" : "ghost"}
+            size="sm"
+            className="text-xs h-6 px-2.5 py-0 rounded-md font-medium"
+            onClick={() => setViewType("candles")}
+          >
+            Candles
+          </Button>
+          <Button
+            variant={viewType === "glow" ? "secondary" : "ghost"}
+            size="sm"
+            className="text-xs h-6 px-2.5 py-0 rounded-md font-medium"
+            onClick={() => setViewType("glow")}
+          >
+            Futuristic Glow
+          </Button>
+        </div>
       </div>
 
       <CardContent className="p-2 pt-0">
@@ -523,6 +675,7 @@ export function PriceChart({
             showMA50={showMA50}
             showRSI={showRSI}
             isDark={isDark}
+            viewType={viewType}
           />
         </div>
       </CardContent>
