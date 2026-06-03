@@ -1,0 +1,158 @@
+{
+  "direction": "up",
+  "confidence": 0.5178,
+  "model_metrics": {
+    "accuracy": 0.5106,
+    "precision": 0.5106,
+    "recall": 1.0,
+    "f1_score": 0.6761
+  },
+  "feature_importance": [
+    {
+      "feature": "Price Range",
+      "importance": 0.1158
+    },
+    {
+      "feature": "News Sentiment",
+      "importance": 0.1157
+    },
+    {
+      "feature": "Momentum",
+      "importance": 0.1129
+    },
+    {
+      "feature": "Volume Change",
+      "importance": 0.112
+    },
+    {
+      "feature": "RSI Indicator",
+      "importance": 0.111
+    },
+    {
+      "feature": "Volatility",
+      "importance": 0.1108
+    },
+    {
+      "feature": "Moving Average Ratio",
+      "importance": 0.1093
+    },
+    {
+      "feature": "MACD Histogram",
+      "importance": 0.1084
+    },
+    {
+      "feature": "Price Returns",
+      "importance": 0.104
+    }
+  ],
+  "factors": {
+    "technical_score": 0.4865,
+    "sentiment_score": 0.5613,
+    "volume_signal": "Normal volume",
+    "price_action": "Slight downward trend",
+    "news_impact": "Moderately positive news"
+  },
+  "analysis_report": [
+    {
+      "title": "Summary",
+      "icon": "summary",
+      "content": "Based on LSTM neural network analysis of JPM's recent market data, the model predicts an upward price movement for the next trading day with low confidence (52%). This prediction is derived from a combination of technical indicators, price momentum, trading volume patterns, and news sentiment analysis."
+    },
+    {
+      "title": "Price Action & Trend",
+      "icon": "trend",
+      "content": "JPM has shown a slight downward trend recently, with an average daily return of -0.14%. Over the last 20 trading sessions, the stock moved from $309.40 to $300.96 (-2.73%). The technical score of 49% suggests a neutral technical outlook."
+    },
+    {
+      "title": "Volume Analysis",
+      "icon": "volume",
+      "content": "Trading volume is near the average level (ratio: 0.95x), suggesting normal market participation. This indicates steady interest without extreme buying or selling pressure."
+    },
+    {
+      "title": "News Sentiment",
+      "icon": "news",
+      "content": "News sentiment analysis shows a moderately positive score of 56%. Recent news about JPM leans positive, suggesting generally favorable market perception, though not overwhelmingly bullish."
+    },
+    {
+      "title": "Key Drivers",
+      "icon": "drivers",
+      "content": "The LSTM model identified the most influential factors for this prediction as: Price Range (12%), News Sentiment (12%), Momentum (11%). Price Range is the most significant factor in the model's decision-making process."
+    },
+    {
+      "title": "Model Confidence",
+      "icon": "model",
+      "content": "The LSTM model achieved 51% accuracy and 68% F1-score on the test dataset. These metrics indicate limited predictive reliability. Stock markets are inherently unpredictable, and predictions should be treated with caution. This model is designed for educational and research purposes only and should not be used as the sole basis for investment decisions."
+    }
+  ],
+  "explain_payload": {
+    "symbol": "JPM",
+    "lstm_direction": "up",
+    "lstm_confidence": 0.5178,
+    "technical_score": 0.4865,
+    "price_action": "Slight downward trend",
+    "volume_signal": "Normal volume",
+    "sentiment_score": 0.5613,
+    "news_impact": "Moderately positive news",
+    "top_feature_importance": [
+      {
+        "feature": "Price Range",
+        "importance": 0.1158
+      },
+      {
+        "feature": "News Sentiment",
+        "importance": 0.1157
+      },
+      {
+        "feature": "Momentum",
+        "importance": 0.1129
+      }
+    ],
+    "recent_news": [
+      {
+        "title": "SpaceX Seeks $135 a Share for $75 Billion IPO, Reuters Says",
+        "source": "Bloomberg",
+        "publishedAt": "2026-06-03T06:57:17.000Z"
+      },
+      {
+        "title": "JPMorgan Chase & Co. (JPM) Exceeds Market Returns: Some Facts to Consider",
+        "source": "Zacks",
+        "publishedAt": "2026-06-02T21:45:02.000Z"
+      },
+      {
+        "title": "Alphabet $80 Billion Equity Sale Set to Break Fundraising Record",
+        "source": "Bloomberg",
+        "publishedAt": "2026-06-02T16:41:53.000Z"
+      },
+      {
+        "title": "JPMorgan Weighs US$20b Deal While Expanding In Europe And Crypto Debate",
+        "source": "Simply Wall St.",
+        "publishedAt": "2026-06-02T16:12:06.000Z"
+      },
+      {
+        "title": "Dear Future Quantinuum Stock Investors, Mark Your Calendars for June 3",
+        "source": "Barchart",
+        "publishedAt": "2026-06-02T15:41:39.000Z"
+      }
+    ]
+  },
+  "model_info": {
+    "algorithm": "LSTM (Long Short-Term Memory)",
+    "text_processing": "TF-IDF + VADER Sentiment",
+    "features_used": [
+      "Price Returns",
+      "Moving Average Ratio",
+      "Volatility",
+      "Volume Change",
+      "Price Range",
+      "Momentum",
+      "News Sentiment",
+      "RSI Indicator",
+      "MACD Histogram"
+    ],
+    "training_samples": 188,
+    "test_samples": 47,
+    "sequence_length": 7,
+    "epochs": 50
+  },
+  "symbol": "JPM"
+}

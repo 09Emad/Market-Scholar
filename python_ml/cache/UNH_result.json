@@ -1,0 +1,158 @@
+{
+  "direction": "down",
+  "confidence": 0.5101,
+  "model_metrics": {
+    "accuracy": 0.4468,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1_score": 0.0
+  },
+  "feature_importance": [
+    {
+      "feature": "Momentum",
+      "importance": 0.1144
+    },
+    {
+      "feature": "MACD Histogram",
+      "importance": 0.1136
+    },
+    {
+      "feature": "Price Range",
+      "importance": 0.1133
+    },
+    {
+      "feature": "Volatility",
+      "importance": 0.1132
+    },
+    {
+      "feature": "Moving Average Ratio",
+      "importance": 0.111
+    },
+    {
+      "feature": "Volume Change",
+      "importance": 0.11
+    },
+    {
+      "feature": "News Sentiment",
+      "importance": 0.1089
+    },
+    {
+      "feature": "Price Returns",
+      "importance": 0.1079
+    },
+    {
+      "feature": "RSI Indicator",
+      "importance": 0.1077
+    }
+  ],
+  "factors": {
+    "technical_score": 0.521,
+    "sentiment_score": 0.4787,
+    "volume_signal": "Low volume - below average",
+    "price_action": "Slight upward trend",
+    "news_impact": "Mixed/neutral news sentiment"
+  },
+  "analysis_report": [
+    {
+      "title": "Summary",
+      "icon": "summary",
+      "content": "Based on LSTM neural network analysis of UNH's recent market data, the model predicts an downward price movement for the next trading day with low confidence (51%). This prediction is derived from a combination of technical indicators, price momentum, trading volume patterns, and news sentiment analysis."
+    },
+    {
+      "title": "Price Action & Trend",
+      "icon": "trend",
+      "content": "UNH has shown a slight upward trend recently, with a modest average daily return of +0.21%. Over the last 20 trading sessions, the stock moved from $363.87 to $377.92 (+3.86%). The technical score of 52% suggests a neutral technical outlook."
+    },
+    {
+      "title": "Volume Analysis",
+      "icon": "volume",
+      "content": "Trading volume is below average (ratio: 0.58x), indicating reduced market participation. Low volume may suggest uncertainty or a potential consolidation phase."
+    },
+    {
+      "title": "News Sentiment",
+      "icon": "news",
+      "content": "News sentiment analysis shows a neutral score of 48%. Recent news coverage about UNH is mixed, with balanced positive and negative reports. A neutral sentiment suggests the market is undecided about future direction."
+    },
+    {
+      "title": "Key Drivers",
+      "icon": "drivers",
+      "content": "The LSTM model identified the most influential factors for this prediction as: Momentum (11%), MACD Histogram (11%), Price Range (11%). Price momentum is the dominant driver, indicating the model is primarily following the recent trend direction."
+    },
+    {
+      "title": "Model Confidence",
+      "icon": "model",
+      "content": "The LSTM model achieved 45% accuracy and 0% F1-score on the test dataset. These metrics indicate limited predictive reliability. Stock markets are inherently unpredictable, and predictions should be treated with caution. This model is designed for educational and research purposes only and should not be used as the sole basis for investment decisions."
+    }
+  ],
+  "explain_payload": {
+    "symbol": "UNH",
+    "lstm_direction": "down",
+    "lstm_confidence": 0.5101,
+    "technical_score": 0.521,
+    "price_action": "Slight upward trend",
+    "volume_signal": "Low volume - below average",
+    "sentiment_score": 0.4787,
+    "news_impact": "Mixed/neutral news sentiment",
+    "top_feature_importance": [
+      {
+        "feature": "Momentum",
+        "importance": 0.1144
+      },
+      {
+        "feature": "MACD Histogram",
+        "importance": 0.1136
+      },
+      {
+        "feature": "Price Range",
+        "importance": 0.1133
+      }
+    ],
+    "recent_news": [
+      {
+        "title": "UnitedHealth Group Updates on Annual Shareholder Meeting, Board Actions",
+        "source": "Business Wire",
+        "publishedAt": "2026-06-03T11:00:00.000Z"
+      },
+      {
+        "title": "Amazon Claims No. 1 Spot on the Fortune 500",
+        "source": "PR Newswire",
+        "publishedAt": "2026-06-03T10:00:00.000Z"
+      },
+      {
+        "title": "Berkshire Hathaway Made Some Major Portfolio Moves, but This One Was a Head-Scratcher. How Should Investors Take It?",
+        "source": "Motley Fool",
+        "publishedAt": "2026-06-03T07:25:00.000Z"
+      },
+      {
+        "title": "UnitedHealth Group (UNH) Hit by Medicare Reimbursement Concerns",
+        "source": "Insider Monkey",
+        "publishedAt": "2026-06-02T16:30:33.000Z"
+      },
+      {
+        "title": "Cigna Stock: Is CI Underperforming the Healthcare Sector?",
+        "source": "Barchart",
+        "publishedAt": "2026-06-02T13:22:28.000Z"
+      }
+    ]
+  },
+  "model_info": {
+    "algorithm": "LSTM (Long Short-Term Memory)",
+    "text_processing": "TF-IDF + VADER Sentiment",
+    "features_used": [
+      "Price Returns",
+      "Moving Average Ratio",
+      "Volatility",
+      "Volume Change",
+      "Price Range",
+      "Momentum",
+      "News Sentiment",
+      "RSI Indicator",
+      "MACD Histogram"
+    ],
+    "training_samples": 188,
+    "test_samples": 47,
+    "sequence_length": 7,
+    "epochs": 50
+  },
+  "symbol": "UNH"
+}

@@ -1,0 +1,158 @@
+{
+  "direction": "down",
+  "confidence": 0.5278,
+  "model_metrics": {
+    "accuracy": 0.4894,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1_score": 0.0
+  },
+  "feature_importance": [
+    {
+      "feature": "Volatility",
+      "importance": 0.1161
+    },
+    {
+      "feature": "MACD Histogram",
+      "importance": 0.1143
+    },
+    {
+      "feature": "Price Returns",
+      "importance": 0.1115
+    },
+    {
+      "feature": "Moving Average Ratio",
+      "importance": 0.1112
+    },
+    {
+      "feature": "RSI Indicator",
+      "importance": 0.1108
+    },
+    {
+      "feature": "Momentum",
+      "importance": 0.1106
+    },
+    {
+      "feature": "Price Range",
+      "importance": 0.1104
+    },
+    {
+      "feature": "Volume Change",
+      "importance": 0.1083
+    },
+    {
+      "feature": "News Sentiment",
+      "importance": 0.1068
+    }
+  ],
+  "factors": {
+    "technical_score": 0.5392,
+    "sentiment_score": 0.5835,
+    "volume_signal": "Normal volume",
+    "price_action": "Slight upward trend",
+    "news_impact": "Moderately positive news"
+  },
+  "analysis_report": [
+    {
+      "title": "Summary",
+      "icon": "summary",
+      "content": "Based on LSTM neural network analysis of MSFT's recent market data, the model predicts an downward price movement for the next trading day with low confidence (53%). This prediction is derived from a combination of technical indicators, price momentum, trading volume patterns, and news sentiment analysis."
+    },
+    {
+      "title": "Price Action & Trend",
+      "icon": "trend",
+      "content": "MSFT has shown a slight upward trend recently, with a modest average daily return of +0.39%. Over the last 20 trading sessions, the stock moved from $411.38 to $441.31 (+7.28%). The technical score of 54% suggests a neutral technical outlook."
+    },
+    {
+      "title": "Volume Analysis",
+      "icon": "volume",
+      "content": "Trading volume is near the average level (ratio: 1.01x), suggesting normal market participation. This indicates steady interest without extreme buying or selling pressure."
+    },
+    {
+      "title": "News Sentiment",
+      "icon": "news",
+      "content": "News sentiment analysis shows a moderately positive score of 58%. Recent news about MSFT leans positive, suggesting generally favorable market perception, though not overwhelmingly bullish."
+    },
+    {
+      "title": "Key Drivers",
+      "icon": "drivers",
+      "content": "The LSTM model identified the most influential factors for this prediction as: Volatility (12%), MACD Histogram (11%), Price Returns (11%). Market volatility is the dominant driver, suggesting high uncertainty in the current market conditions."
+    },
+    {
+      "title": "Model Confidence",
+      "icon": "model",
+      "content": "The LSTM model achieved 49% accuracy and 0% F1-score on the test dataset. These metrics indicate limited predictive reliability. Stock markets are inherently unpredictable, and predictions should be treated with caution. This model is designed for educational and research purposes only and should not be used as the sole basis for investment decisions."
+    }
+  ],
+  "explain_payload": {
+    "symbol": "MSFT",
+    "lstm_direction": "down",
+    "lstm_confidence": 0.5278,
+    "technical_score": 0.5392,
+    "price_action": "Slight upward trend",
+    "volume_signal": "Normal volume",
+    "sentiment_score": 0.5835,
+    "news_impact": "Moderately positive news",
+    "top_feature_importance": [
+      {
+        "feature": "Volatility",
+        "importance": 0.1161
+      },
+      {
+        "feature": "MACD Histogram",
+        "importance": 0.1143
+      },
+      {
+        "feature": "Price Returns",
+        "importance": 0.1115
+      }
+    ],
+    "recent_news": [
+      {
+        "title": "Reflexivity Brings Real-Time Portfolio Intelligence to Microsoft 365 Copilot",
+        "source": "GlobeNewswire",
+        "publishedAt": "2026-06-03T11:00:00.000Z"
+      },
+      {
+        "title": "Social Buzz: Wallstreetbets Stocks Mixed Pre-Bell Wednesday; Marvell Technology to Advance, AST SpaceMobile to Decline",
+        "source": "MT Newswires",
+        "publishedAt": "2026-06-03T10:50:12.000Z"
+      },
+      {
+        "title": "Microsoft Unveils New Quantum Chip. What It Means for the Stock.",
+        "source": "Barrons.com",
+        "publishedAt": "2026-06-03T10:17:00.000Z"
+      },
+      {
+        "title": "Analysis-Software stocks bounce back - now comes the hard part",
+        "source": "Reuters",
+        "publishedAt": "2026-06-03T10:07:53.000Z"
+      },
+      {
+        "title": "Palantir Stock Has Stalled. Now Some Investors Want to Probe Its Human Rights Policies.",
+        "source": "Barrons.com",
+        "publishedAt": "2026-06-03T10:00:00.000Z"
+      }
+    ]
+  },
+  "model_info": {
+    "algorithm": "LSTM (Long Short-Term Memory)",
+    "text_processing": "TF-IDF + VADER Sentiment",
+    "features_used": [
+      "Price Returns",
+      "Moving Average Ratio",
+      "Volatility",
+      "Volume Change",
+      "Price Range",
+      "Momentum",
+      "News Sentiment",
+      "RSI Indicator",
+      "MACD Histogram"
+    ],
+    "training_samples": 188,
+    "test_samples": 47,
+    "sequence_length": 7,
+    "epochs": 50
+  },
+  "symbol": "MSFT"
+}

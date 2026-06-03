@@ -32,6 +32,11 @@ try:
 except LookupError:
     nltk.download('stopwords', quiet=True)
 
+import pickle
+
+CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')
+os.makedirs(CACHE_DIR, exist_ok=True)
+
 app = Flask(__name__)
 CORS(app)
 
@@ -79,7 +84,7 @@ def analyze_sentiment_tfidf(texts):
     return results
 
 
-def prepare_lstm_data(prices, sentiments, sequence_length=10):
+def prepare_lstm_data(prices, sentiments, sequence_length=10, scaler=None):
     df = pd.DataFrame(prices)
 
     df['returns'] = df['close'].pct_change()
@@ -89,6 +94,22 @@ def prepare_lstm_data(prices, sentiments, sequence_length=10):
     df['volume_change'] = df['volume'].pct_change()
     df['price_range'] = (df['high'] - df['low']) / df['close']
     df['momentum'] = df['close'] - df['close'].shift(5)
+
+    # RSI (14)
+    delta = df['close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+    rs = gain / (loss + 1e-9)
+    df['rsi'] = 100 - (100 / (1 + rs))
+    df['rsi'] = df['rsi'].fillna(50) / 100.0  # Normalize to 0-1 range
+
+    # MACD
+    ema_12 = df['close'].ewm(span=12, adjust=False).mean()
+    ema_26 = df['close'].ewm(span=26, adjust=False).mean()
+    df['macd'] = ema_12 - ema_26
+    df['macd_signal'] = df['macd'].ewm(span=9, adjust=False).mean()
+    df['macd_hist'] = df['macd'] - df['macd_signal']
+    df['macd_hist'] = df['macd_hist'].fillna(0)
 
     avg_sentiment = sentiments if isinstance(sentiments, (int, float)) else 0.5
     df['sentiment'] = avg_sentiment
@@ -104,12 +125,16 @@ def prepare_lstm_data(prices, sentiments, sequence_length=10):
     df = df.dropna().reset_index(drop=True)
 
     feature_columns = ['returns', 'sma_ratio', 'volatility', 'volume_change',
-                        'price_range', 'momentum', 'sentiment']
+                        'price_range', 'momentum', 'sentiment', 'rsi', 'macd_hist']
     feature_names = ['Price Returns', 'Moving Average Ratio', 'Volatility',
-                     'Volume Change', 'Price Range', 'Momentum', 'News Sentiment']
+                     'Volume Change', 'Price Range', 'Momentum', 'News Sentiment',
+                     'RSI Indicator', 'MACD Histogram']
 
-    scaler = MinMaxScaler()
-    scaled_features = scaler.fit_transform(df[feature_columns].values)
+    if scaler is None:
+        scaler = MinMaxScaler()
+        scaled_features = scaler.fit_transform(df[feature_columns].values)
+    else:
+        scaled_features = scaler.transform(df[feature_columns].values)
 
     X, y = [], []
     for i in range(len(scaled_features) - sequence_length):
@@ -156,10 +181,23 @@ def train_and_predict(prices, sentiment_score, symbol, news_articles=None):
     if len(X_train) < 5 or len(X_test) < 3:
         return generate_fallback_prediction(prices, sentiment_score)
 
+    from tensorflow.keras.callbacks import EarlyStopping
+    early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+
     model = build_lstm_model((X.shape[1], X.shape[2]))
 
-    model.fit(X_train, y_train, epochs=50, batch_size=8, verbose=0,
-              validation_split=0.1)
+    model.fit(X_train, y_train, epochs=30, batch_size=8, verbose=0,
+              validation_split=0.1, callbacks=[early_stop])
+
+    # Save model and scaler to cache
+    model_path = os.path.join(CACHE_DIR, f"{symbol}_model.keras")
+    scaler_path = os.path.join(CACHE_DIR, f"{symbol}_scaler.pkl")
+    try:
+        model.save(model_path)
+        with open(scaler_path, "wb") as f:
+            pickle.dump(scaler, f)
+    except Exception as e:
+        print(f"Error saving model/scaler to cache for {symbol}: {e}")
 
     y_pred_proba = model.predict(X_test, verbose=0)
     y_pred = (y_pred_proba > 0.5).astype(int).flatten()
@@ -168,6 +206,20 @@ def train_and_predict(prices, sentiment_score, symbol, news_articles=None):
     precision = precision_score(y_test, y_pred, zero_division=0.0)
     recall = recall_score(y_test, y_pred, zero_division=0.0)
     f1 = f1_score(y_test, y_pred, zero_division=0.0)
+
+    # Save metrics to cache
+    metrics_path = os.path.join(CACHE_DIR, f"{symbol}_metrics.json")
+    try:
+        metrics_data = {
+            "accuracy": round(float(accuracy), 4),
+            "precision": round(float(precision), 4),
+            "recall": round(float(recall), 4),
+            "f1_score": round(float(f1), 4)
+        }
+        with open(metrics_path, "w", encoding="utf-8") as f:
+            json.dump(metrics_data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Error saving metrics to cache for {symbol}: {e}")
 
     last_sequence = X[-1:] 
     next_day_pred = model.predict(last_sequence, verbose=0)[0][0]
@@ -269,6 +321,137 @@ def train_and_predict(prices, sentiment_score, symbol, news_articles=None):
             'test_samples': len(X_test),
             'sequence_length': sequence_length,
             'epochs': 50
+        }
+    }
+
+    return result
+
+
+def load_and_predict(prices, sentiment_score, symbol, news_articles=None):
+    from tensorflow.keras.models import load_model
+    sequence_length = 7
+    news_articles = news_articles or []
+
+    # Paths
+    model_path = os.path.join(CACHE_DIR, f"{symbol}_model.keras")
+    scaler_path = os.path.join(CACHE_DIR, f"{symbol}_scaler.pkl")
+    metrics_path = os.path.join(CACHE_DIR, f"{symbol}_metrics.json")
+
+    # Load Model, Scaler, Metrics
+    model = load_model(model_path)
+    with open(scaler_path, "rb") as f:
+        scaler = pickle.load(f)
+    
+    with open(metrics_path, "r", encoding="utf-8") as f:
+        metrics = json.load(f)
+
+    X, y, feature_cols, feature_names, scaler = prepare_lstm_data(
+        prices, sentiment_score, sequence_length, scaler=scaler
+    )
+
+    if X is None or len(X) < 15:
+        return generate_fallback_prediction(prices, sentiment_score)
+
+    split_idx = int(len(X) * 0.8)
+    X_test = X[split_idx:]
+    y_test = y[split_idx:]
+
+    last_sequence = X[-1:] 
+    next_day_pred = model.predict(last_sequence, verbose=0)[0][0]
+
+    direction = 'up' if next_day_pred > 0.5 else 'down'
+    raw_confidence = float(next_day_pred) if direction == 'up' else float(1 - next_day_pred)
+    confidence = min(0.92, max(0.35, raw_confidence))
+
+    # Compute feature importance dynamically based on current test data
+    importance = compute_feature_importance(model, X_test, y_test, feature_names)
+
+    recent_prices = [p['close'] for p in prices[-20:]]
+    avg_change = np.mean(np.diff(recent_prices) / recent_prices[:-1]) if len(recent_prices) > 1 else 0
+    avg_volume = np.mean([p['volume'] for p in prices[-20:]]) if prices else 0
+    last_volume = prices[-1]['volume'] if prices else 0
+    volume_ratio = last_volume / avg_volume if avg_volume > 0 else 1
+
+    if avg_change > 0.005:
+        price_action = "Strong upward trend"
+    elif avg_change > 0:
+        price_action = "Slight upward trend"
+    elif avg_change > -0.005:
+        price_action = "Slight downward trend"
+    else:
+        price_action = "Strong downward trend"
+
+    if volume_ratio > 1.3:
+        volume_signal = "High volume - above average"
+    elif volume_ratio > 0.8:
+        volume_signal = "Normal volume"
+    else:
+        volume_signal = "Low volume - below average"
+
+    technical_score = float(np.clip(0.5 + avg_change * 10, 0, 1))
+    news_impact_desc = get_news_impact_description(sentiment_score)
+
+    analysis_report = generate_analysis_report(
+        symbol=symbol,
+        direction=direction,
+        confidence=confidence,
+        sentiment_score=sentiment_score,
+        technical_score=technical_score,
+        price_action=price_action,
+        volume_signal=volume_signal,
+        volume_ratio=volume_ratio,
+        avg_change=avg_change,
+        news_impact=news_impact_desc,
+        recent_prices=recent_prices,
+        importance=importance,
+        model_metrics=metrics
+    )
+
+    top_feature_importance = importance[:3] if importance else []
+    recent_news = []
+    for article in news_articles[:5]:
+        recent_news.append({
+            'title': article.get('title', ''),
+            'source': article.get('source', 'Unknown'),
+            'publishedAt': article.get('publishedAt', '')
+        })
+
+    explain_payload = {
+        'symbol': symbol,
+        'lstm_direction': direction,
+        'lstm_confidence': round(confidence, 4),
+        'technical_score': round(technical_score, 4),
+        'price_action': price_action,
+        'volume_signal': volume_signal,
+        'sentiment_score': round(sentiment_score, 4),
+        'news_impact': news_impact_desc,
+        'top_feature_importance': top_feature_importance,
+        'recent_news': recent_news
+    }
+
+    result = {
+        'direction': direction,
+        'confidence': round(confidence, 4),
+        'model_metrics': metrics,
+        'feature_importance': importance,
+        'factors': {
+            'technical_score': round(technical_score, 4),
+            'sentiment_score': round(sentiment_score, 4),
+            'volume_signal': volume_signal,
+            'price_action': price_action,
+            'news_impact': news_impact_desc
+        },
+        'analysis_report': analysis_report,
+        'explain_payload': explain_payload,
+        'model_info': {
+            'algorithm': 'LSTM (Long Short-Term Memory)',
+            'text_processing': 'TF-IDF + VADER Sentiment',
+            'features_used': feature_names,
+            'training_samples': len(X) - len(X_test),
+            'test_samples': len(X_test),
+            'sequence_length': sequence_length,
+            'epochs': 30,
+            'is_live_inference': True
         }
     }
 
@@ -620,13 +803,37 @@ def analyze_sentiment_endpoint():
 
 @app.route('/predict', methods=['POST'])
 def predict_endpoint():
+    import time
     data = request.get_json()
-    symbol = data.get('symbol', '')
+    symbol = data.get('symbol', '').upper()
     prices = data.get('prices', [])
     news_articles = data.get('news', [])
 
     if not prices:
         return jsonify({'error': 'No price data provided'}), 400
+
+    # Check if a fresh cached model and scaler exist (under 12 hours old)
+    model_path = os.path.join(CACHE_DIR, f"{symbol}_model.keras")
+    scaler_path = os.path.join(CACHE_DIR, f"{symbol}_scaler.pkl")
+    metrics_path = os.path.join(CACHE_DIR, f"{symbol}_metrics.json")
+
+    if os.path.exists(model_path) and os.path.exists(scaler_path) and os.path.exists(metrics_path):
+        mtime = os.path.getmtime(model_path)
+        if time.time() - mtime < 43200: # 12 hours in seconds
+            try:
+                avg_sentiment = 0.5
+                if news_articles:
+                    texts = [a.get('title', '') + ' ' + a.get('description', '') for a in news_articles]
+                    sentiments = analyze_sentiment_tfidf(texts)
+                    scores = [s['score'] for s in sentiments]
+                    avg_sentiment = np.mean(scores) if scores else 0.5
+
+                print(f"Running live inference using cached model for {symbol}...")
+                result = load_and_predict(prices, avg_sentiment, symbol, news_articles)
+                result['symbol'] = symbol
+                return jsonify(result)
+            except Exception as e:
+                print(f"Error running live inference for {symbol}, falling back to training: {e}")
 
     avg_sentiment = 0.5
     if news_articles:

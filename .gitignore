@@ -5,4 +5,9 @@ server/public
 vite.config.ts.*
 *.tar.gz
 venv/
+.venv311/
+.venv/
+__pycache__/
+python_ml/__pycache__/
+*.pyc
 .env

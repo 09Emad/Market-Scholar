@@ -1,0 +1,158 @@
+{
+  "direction": "up",
+  "confidence": 0.5153,
+  "model_metrics": {
+    "accuracy": 0.5957,
+    "precision": 0.5957,
+    "recall": 1.0,
+    "f1_score": 0.7467
+  },
+  "feature_importance": [
+    {
+      "feature": "Moving Average Ratio",
+      "importance": 0.1165
+    },
+    {
+      "feature": "RSI Indicator",
+      "importance": 0.1143
+    },
+    {
+      "feature": "Price Range",
+      "importance": 0.1136
+    },
+    {
+      "feature": "Volume Change",
+      "importance": 0.1133
+    },
+    {
+      "feature": "MACD Histogram",
+      "importance": 0.113
+    },
+    {
+      "feature": "Price Returns",
+      "importance": 0.1126
+    },
+    {
+      "feature": "Volatility",
+      "importance": 0.1112
+    },
+    {
+      "feature": "News Sentiment",
+      "importance": 0.1067
+    },
+    {
+      "feature": "Momentum",
+      "importance": 0.0989
+    }
+  ],
+  "factors": {
+    "technical_score": 0.4674,
+    "sentiment_score": 0.5044,
+    "volume_signal": "Normal volume",
+    "price_action": "Slight downward trend",
+    "news_impact": "Mixed/neutral news sentiment"
+  },
+  "analysis_report": [
+    {
+      "title": "Summary",
+      "icon": "summary",
+      "content": "Based on LSTM neural network analysis of AMZN's recent market data, the model predicts an upward price movement for the next trading day with low confidence (52%). This prediction is derived from a combination of technical indicators, price momentum, trading volume patterns, and news sentiment analysis."
+    },
+    {
+      "title": "Price Action & Trend",
+      "icon": "trend",
+      "content": "AMZN has shown a slight downward trend recently, with an average daily return of -0.33%. Over the last 20 trading sessions, the stock moved from $273.55 to $256.52 (-6.23%). The technical score of 47% suggests a neutral technical outlook."
+    },
+    {
+      "title": "Volume Analysis",
+      "icon": "volume",
+      "content": "Trading volume is near the average level (ratio: 1.06x), suggesting normal market participation. This indicates steady interest without extreme buying or selling pressure."
+    },
+    {
+      "title": "News Sentiment",
+      "icon": "news",
+      "content": "News sentiment analysis shows a neutral score of 50%. Recent news coverage about AMZN is mixed, with balanced positive and negative reports. A neutral sentiment suggests the market is undecided about future direction."
+    },
+    {
+      "title": "Key Drivers",
+      "icon": "drivers",
+      "content": "The LSTM model identified the most influential factors for this prediction as: Moving Average Ratio (12%), RSI Indicator (11%), Price Range (11%). Moving Average Ratio is the most significant factor in the model's decision-making process."
+    },
+    {
+      "title": "Model Confidence",
+      "icon": "model",
+      "content": "The LSTM model achieved 60% accuracy and 75% F1-score on the test dataset. These metrics suggest reasonable predictive performance, though past performance does not guarantee future accuracy. This model is designed for educational and research purposes only and should not be used as the sole basis for investment decisions."
+    }
+  ],
+  "explain_payload": {
+    "symbol": "AMZN",
+    "lstm_direction": "up",
+    "lstm_confidence": 0.5153,
+    "technical_score": 0.4674,
+    "price_action": "Slight downward trend",
+    "volume_signal": "Normal volume",
+    "sentiment_score": 0.5044,
+    "news_impact": "Mixed/neutral news sentiment",
+    "top_feature_importance": [
+      {
+        "feature": "Moving Average Ratio",
+        "importance": 0.1165
+      },
+      {
+        "feature": "RSI Indicator",
+        "importance": 0.1143
+      },
+      {
+        "feature": "Price Range",
+        "importance": 0.1136
+      }
+    ],
+    "recent_news": [
+      {
+        "title": "Microsoft Unveils New Quantum Chip. What It Means for the Stock.",
+        "source": "Barrons.com",
+        "publishedAt": "2026-06-03T10:17:00.000Z"
+      },
+      {
+        "title": "Amazon Claims No. 1 Spot on the Fortune 500",
+        "source": "PR Newswire",
+        "publishedAt": "2026-06-03T10:00:00.000Z"
+      },
+      {
+        "title": "Amazon.com Unveils Prime Membership in South Africa",
+        "source": "MT Newswires",
+        "publishedAt": "2026-06-03T09:28:45.000Z"
+      },
+      {
+        "title": "Private infra, real estate capital to play larger financing role in AI data center boom, Goldman says",
+        "source": "Reuters",
+        "publishedAt": "2026-06-03T08:44:45.000Z"
+      },
+      {
+        "title": "Tangem Pushes Offline Crypto Hardware Wallets Into 200 US Stores",
+        "source": "BeInCrypto",
+        "publishedAt": "2026-06-03T08:23:20.000Z"
+      }
+    ]
+  },
+  "model_info": {
+    "algorithm": "LSTM (Long Short-Term Memory)",
+    "text_processing": "TF-IDF + VADER Sentiment",
+    "features_used": [
+      "Price Returns",
+      "Moving Average Ratio",
+      "Volatility",
+      "Volume Change",
+      "Price Range",
+      "Momentum",
+      "News Sentiment",
+      "RSI Indicator",
+      "MACD Histogram"
+    ],
+    "training_samples": 188,
+    "test_samples": 47,
+    "sequence_length": 7,
+    "epochs": 50
+  },
+  "symbol": "AMZN"
+}

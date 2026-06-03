@@ -1,0 +1,158 @@
+{
+  "direction": "up",
+  "confidence": 0.5314,
+  "model_metrics": {
+    "accuracy": 0.5106,
+    "precision": 0.5106,
+    "recall": 1.0,
+    "f1_score": 0.6761
+  },
+  "feature_importance": [
+    {
+      "feature": "Volume Change",
+      "importance": 0.1172
+    },
+    {
+      "feature": "Price Returns",
+      "importance": 0.1132
+    },
+    {
+      "feature": "Price Range",
+      "importance": 0.1124
+    },
+    {
+      "feature": "MACD Histogram",
+      "importance": 0.1122
+    },
+    {
+      "feature": "Volatility",
+      "importance": 0.11
+    },
+    {
+      "feature": "News Sentiment",
+      "importance": 0.11
+    },
+    {
+      "feature": "Moving Average Ratio",
+      "importance": 0.1088
+    },
+    {
+      "feature": "Momentum",
+      "importance": 0.1081
+    },
+    {
+      "feature": "RSI Indicator",
+      "importance": 0.1081
+    }
+  ],
+  "factors": {
+    "technical_score": 0.4644,
+    "sentiment_score": 0.4953,
+    "volume_signal": "High volume - above average",
+    "price_action": "Slight downward trend",
+    "news_impact": "Mixed/neutral news sentiment"
+  },
+  "analysis_report": [
+    {
+      "title": "Summary",
+      "icon": "summary",
+      "content": "Based on LSTM neural network analysis of GOOGL's recent market data, the model predicts an upward price movement for the next trading day with low confidence (53%). This prediction is derived from a combination of technical indicators, price momentum, trading volume patterns, and news sentiment analysis."
+    },
+    {
+      "title": "Price Action & Trend",
+      "icon": "trend",
+      "content": "GOOGL has shown a slight downward trend recently, with an average daily return of -0.36%. Over the last 20 trading sessions, the stock moved from $388.43 to $361.85 (-6.84%). The technical score of 46% suggests a neutral technical outlook."
+    },
+    {
+      "title": "Volume Analysis",
+      "icon": "volume",
+      "content": "Trading volume is significantly above average (ratio: 1.76x), indicating strong market interest and conviction behind the current price movement. High volume typically confirms the prevailing trend direction."
+    },
+    {
+      "title": "News Sentiment",
+      "icon": "news",
+      "content": "News sentiment analysis shows a neutral score of 50%. Recent news coverage about GOOGL is mixed, with balanced positive and negative reports. A neutral sentiment suggests the market is undecided about future direction."
+    },
+    {
+      "title": "Key Drivers",
+      "icon": "drivers",
+      "content": "The LSTM model identified the most influential factors for this prediction as: Volume Change (12%), Price Returns (11%), Price Range (11%). Volume dynamics are the dominant driver, indicating that changes in trading activity are a key signal."
+    },
+    {
+      "title": "Model Confidence",
+      "icon": "model",
+      "content": "The LSTM model achieved 51% accuracy and 68% F1-score on the test dataset. These metrics indicate limited predictive reliability. Stock markets are inherently unpredictable, and predictions should be treated with caution. This model is designed for educational and research purposes only and should not be used as the sole basis for investment decisions."
+    }
+  ],
+  "explain_payload": {
+    "symbol": "GOOGL",
+    "lstm_direction": "up",
+    "lstm_confidence": 0.5314,
+    "technical_score": 0.4644,
+    "price_action": "Slight downward trend",
+    "volume_signal": "High volume - above average",
+    "sentiment_score": 0.4953,
+    "news_impact": "Mixed/neutral news sentiment",
+    "top_feature_importance": [
+      {
+        "feature": "Volume Change",
+        "importance": 0.1172
+      },
+      {
+        "feature": "Price Returns",
+        "importance": 0.1132
+      },
+      {
+        "feature": "Price Range",
+        "importance": 0.1124
+      }
+    ],
+    "recent_news": [
+      {
+        "title": "Here comes the stock deluge",
+        "source": "Axios",
+        "publishedAt": "2026-06-03T11:00:08.000Z"
+      },
+      {
+        "title": "Dow Jones Futures: Oil Prices Rise, Palo Alto Falls On Earnings; New Trump Tariffs Coming",
+        "source": "Investor's Business Daily",
+        "publishedAt": "2026-06-03T11:04:58.000Z"
+      },
+      {
+        "title": "Microsoft Unveils New Quantum Chip. What It Means for the Stock.",
+        "source": "Barrons.com",
+        "publishedAt": "2026-06-03T10:17:00.000Z"
+      },
+      {
+        "title": "Amazon Claims No. 1 Spot on the Fortune 500",
+        "source": "PR Newswire",
+        "publishedAt": "2026-06-03T10:00:00.000Z"
+      },
+      {
+        "title": "Klarna Reports Delay in Court Ruling on PriceRunner's Google Antitrust Case",
+        "source": "MT Newswires",
+        "publishedAt": "2026-06-03T09:56:08.000Z"
+      }
+    ]
+  },
+  "model_info": {
+    "algorithm": "LSTM (Long Short-Term Memory)",
+    "text_processing": "TF-IDF + VADER Sentiment",
+    "features_used": [
+      "Price Returns",
+      "Moving Average Ratio",
+      "Volatility",
+      "Volume Change",
+      "Price Range",
+      "Momentum",
+      "News Sentiment",
+      "RSI Indicator",
+      "MACD Histogram"
+    ],
+    "training_samples": 188,
+    "test_samples": 47,
+    "sequence_length": 7,
+    "epochs": 50
+  },
+  "symbol": "GOOGL"
+}

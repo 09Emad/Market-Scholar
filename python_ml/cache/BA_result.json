@@ -1,0 +1,158 @@
+{
+  "direction": "down",
+  "confidence": 0.5093,
+  "model_metrics": {
+    "accuracy": 0.5532,
+    "precision": 0.5833,
+    "recall": 0.56,
+    "f1_score": 0.5714
+  },
+  "feature_importance": [
+    {
+      "feature": "MACD Histogram",
+      "importance": 0.4009
+    },
+    {
+      "feature": "Moving Average Ratio",
+      "importance": 0.1033
+    },
+    {
+      "feature": "Volatility",
+      "importance": 0.1013
+    },
+    {
+      "feature": "Volume Change",
+      "importance": 0.1013
+    },
+    {
+      "feature": "Price Returns",
+      "importance": 0.0732
+    },
+    {
+      "feature": "Momentum",
+      "importance": 0.0709
+    },
+    {
+      "feature": "RSI Indicator",
+      "importance": 0.0581
+    },
+    {
+      "feature": "Price Range",
+      "importance": 0.0468
+    },
+    {
+      "feature": "News Sentiment",
+      "importance": 0.0442
+    }
+  ],
+  "factors": {
+    "technical_score": 0.4868,
+    "sentiment_score": 0.5067,
+    "volume_signal": "Normal volume",
+    "price_action": "Slight downward trend",
+    "news_impact": "Mixed/neutral news sentiment"
+  },
+  "analysis_report": [
+    {
+      "title": "Summary",
+      "icon": "summary",
+      "content": "Based on LSTM neural network analysis of BA's recent market data, the model predicts an downward price movement for the next trading day with low confidence (51%). This prediction is derived from a combination of technical indicators, price momentum, trading volume patterns, and news sentiment analysis."
+    },
+    {
+      "title": "Price Action & Trend",
+      "icon": "trend",
+      "content": "BA has shown a slight downward trend recently, with an average daily return of -0.13%. Over the last 20 trading sessions, the stock moved from $224.38 to $217.70 (-2.98%). The technical score of 49% suggests a neutral technical outlook."
+    },
+    {
+      "title": "Volume Analysis",
+      "icon": "volume",
+      "content": "Trading volume is near the average level (ratio: 1.02x), suggesting normal market participation. This indicates steady interest without extreme buying or selling pressure."
+    },
+    {
+      "title": "News Sentiment",
+      "icon": "news",
+      "content": "News sentiment analysis shows a neutral score of 51%. Recent news coverage about BA is mixed, with balanced positive and negative reports. A neutral sentiment suggests the market is undecided about future direction."
+    },
+    {
+      "title": "Key Drivers",
+      "icon": "drivers",
+      "content": "The LSTM model identified the most influential factors for this prediction as: MACD Histogram (40%), Moving Average Ratio (10%), Volatility (10%). MACD Histogram is the most significant factor in the model's decision-making process."
+    },
+    {
+      "title": "Model Confidence",
+      "icon": "model",
+      "content": "The LSTM model achieved 55% accuracy and 57% F1-score on the test dataset. These metrics indicate limited predictive reliability. Stock markets are inherently unpredictable, and predictions should be treated with caution. This model is designed for educational and research purposes only and should not be used as the sole basis for investment decisions."
+    }
+  ],
+  "explain_payload": {
+    "symbol": "BA",
+    "lstm_direction": "down",
+    "lstm_confidence": 0.5093,
+    "technical_score": 0.4868,
+    "price_action": "Slight downward trend",
+    "volume_signal": "Normal volume",
+    "sentiment_score": 0.5067,
+    "news_impact": "Mixed/neutral news sentiment",
+    "top_feature_importance": [
+      {
+        "feature": "MACD Histogram",
+        "importance": 0.4009
+      },
+      {
+        "feature": "Moving Average Ratio",
+        "importance": 0.1033
+      },
+      {
+        "feature": "Volatility",
+        "importance": 0.1013
+      }
+    ],
+    "recent_news": [
+      {
+        "title": "Boeing Agrees to Sell 737-800 Aircraft to Norwegian Air Shuttle",
+        "source": "MT Newswires",
+        "publishedAt": "2026-06-03T09:19:06.000Z"
+      },
+      {
+        "title": "General Dynamics Stock: Is GD Underperforming the Industrial Sector?",
+        "source": "Barchart",
+        "publishedAt": "2026-06-03T04:32:40.000Z"
+      },
+      {
+        "title": "Alphabet $80 Billion Equity Sale Set to Break Fundraising Record",
+        "source": "Bloomberg",
+        "publishedAt": "2026-06-02T16:41:53.000Z"
+      },
+      {
+        "title": "RTX Outperforms Industry in the Past 6 Months: Should You Buy?",
+        "source": "Zacks",
+        "publishedAt": "2026-06-02T15:12:00.000Z"
+      },
+      {
+        "title": "Boeing (BA) Q1 2026 Earnings Call Transcript",
+        "source": "Motley Fool",
+        "publishedAt": "2026-06-02T15:04:39.000Z"
+      }
+    ]
+  },
+  "model_info": {
+    "algorithm": "LSTM (Long Short-Term Memory)",
+    "text_processing": "TF-IDF + VADER Sentiment",
+    "features_used": [
+      "Price Returns",
+      "Moving Average Ratio",
+      "Volatility",
+      "Volume Change",
+      "Price Range",
+      "Momentum",
+      "News Sentiment",
+      "RSI Indicator",
+      "MACD Histogram"
+    ],
+    "training_samples": 188,
+    "test_samples": 47,
+    "sequence_length": 7,
+    "epochs": 50
+  },
+  "symbol": "BA"
+}

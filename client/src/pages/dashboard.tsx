@@ -21,8 +21,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Brain, RefreshCw } from "lucide-react";
 import type { StockQuote, NewsArticle, PredictionResult, Prediction } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
+import { useTheme } from "@/components/theme-toggle";
+import { LogOut, Sun, Moon } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function Dashboard() {
+  const { user, logoutMutation } = useAuth();
+  const [, setLocation] = useLocation();
+  const { isDark, toggle: toggleTheme } = useTheme();
   const [selectedSymbol, setSelectedSymbol] = useState<string>("");
   const [timeRange, setTimeRange] = useState("1m");
   const { toast } = useToast();
@@ -113,10 +129,19 @@ useEffect(() => {
   );
 
   const handleGeneratePrediction = useCallback(() => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to generate AI predictions and run LSTM models.",
+        variant: "destructive",
+      });
+      setLocation("/auth");
+      return;
+    }
     if (selectedSymbol) {
       predictionMutation.mutate(selectedSymbol);
     }
-  }, [selectedSymbol, predictionMutation]);
+  }, [selectedSymbol, predictionMutation, user, setLocation, toast]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -137,7 +162,68 @@ useEffect(() => {
           </div>
           <div className="flex items-center gap-3">
             <MarketStatus />
-            <ThemeToggle />
+            {user ? (
+              <div className="border-l pl-3 ml-1">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 border border-border/50 hover:bg-muted transition-all duration-200 active:scale-95">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold uppercase">
+                          {user.username.slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal py-2 px-3">
+                      <div className="flex flex-col space-y-1">
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Account Info</span>
+                        <span className="text-sm font-bold text-foreground truncate">{user.username}</span>
+                        <Badge variant="outline" className="text-[10px] py-0 px-1.5 w-fit border-emerald-500/20 bg-emerald-500/5 text-emerald-500">
+                          Active Student
+                        </Badge>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="font-normal py-1 px-3">
+                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Settings</span>
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer flex items-center justify-between py-2 px-3">
+                      <div className="flex items-center gap-2">
+                        {isDark ? <Sun className="h-4 w-4 text-amber-500" /> : <Moon className="h-4 w-4 text-indigo-500" />}
+                        <span className="text-sm">{isDark ? "Light Mode" : "Dark Mode"}</span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground bg-muted py-0.5 px-1.5 rounded">
+                        Theme
+                      </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => logoutMutation.mutate()}
+                      disabled={logoutMutation.isPending}
+                      className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer py-2 px-3"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span className="text-sm">Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : (
+              <>
+                <div className="border-l pl-3 ml-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setLocation("/auth")}
+                    className="text-xs font-semibold"
+                  >
+                    Sign In
+                  </Button>
+                </div>
+                <ThemeToggle />
+              </>
+            )}
           </div>
         </div>
       </header>

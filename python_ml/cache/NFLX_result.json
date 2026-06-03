@@ -1,0 +1,158 @@
+{
+  "direction": "down",
+  "confidence": 0.5164,
+  "model_metrics": {
+    "accuracy": 0.5957,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1_score": 0.0
+  },
+  "feature_importance": [
+    {
+      "feature": "MACD Histogram",
+      "importance": 0.1157
+    },
+    {
+      "feature": "Volatility",
+      "importance": 0.1121
+    },
+    {
+      "feature": "News Sentiment",
+      "importance": 0.112
+    },
+    {
+      "feature": "Price Returns",
+      "importance": 0.1114
+    },
+    {
+      "feature": "Price Range",
+      "importance": 0.1114
+    },
+    {
+      "feature": "RSI Indicator",
+      "importance": 0.1107
+    },
+    {
+      "feature": "Momentum",
+      "importance": 0.11
+    },
+    {
+      "feature": "Volume Change",
+      "importance": 0.1095
+    },
+    {
+      "feature": "Moving Average Ratio",
+      "importance": 0.1071
+    }
+  ],
+  "factors": {
+    "technical_score": 0.473,
+    "sentiment_score": 0.5923,
+    "volume_signal": "Normal volume",
+    "price_action": "Slight downward trend",
+    "news_impact": "Moderately positive news"
+  },
+  "analysis_report": [
+    {
+      "title": "Summary",
+      "icon": "summary",
+      "content": "Based on LSTM neural network analysis of NFLX's recent market data, the model predicts an downward price movement for the next trading day with low confidence (52%). This prediction is derived from a combination of technical indicators, price momentum, trading volume patterns, and news sentiment analysis."
+    },
+    {
+      "title": "Price Action & Trend",
+      "icon": "trend",
+      "content": "NFLX has shown a slight downward trend recently, with an average daily return of -0.27%. Over the last 20 trading sessions, the stock moved from $87.89 to $83.33 (-5.19%). The technical score of 47% suggests a neutral technical outlook."
+    },
+    {
+      "title": "Volume Analysis",
+      "icon": "volume",
+      "content": "Trading volume is near the average level (ratio: 1.25x), suggesting normal market participation. This indicates steady interest without extreme buying or selling pressure."
+    },
+    {
+      "title": "News Sentiment",
+      "icon": "news",
+      "content": "News sentiment analysis shows a moderately positive score of 59%. Recent news about NFLX leans positive, suggesting generally favorable market perception, though not overwhelmingly bullish."
+    },
+    {
+      "title": "Key Drivers",
+      "icon": "drivers",
+      "content": "The LSTM model identified the most influential factors for this prediction as: MACD Histogram (12%), Volatility (11%), News Sentiment (11%). MACD Histogram is the most significant factor in the model's decision-making process."
+    },
+    {
+      "title": "Model Confidence",
+      "icon": "model",
+      "content": "The LSTM model achieved 60% accuracy and 0% F1-score on the test dataset. These metrics suggest reasonable predictive performance, though past performance does not guarantee future accuracy. This model is designed for educational and research purposes only and should not be used as the sole basis for investment decisions."
+    }
+  ],
+  "explain_payload": {
+    "symbol": "NFLX",
+    "lstm_direction": "down",
+    "lstm_confidence": 0.5164,
+    "technical_score": 0.473,
+    "price_action": "Slight downward trend",
+    "volume_signal": "Normal volume",
+    "sentiment_score": 0.5923,
+    "news_impact": "Moderately positive news",
+    "top_feature_importance": [
+      {
+        "feature": "MACD Histogram",
+        "importance": 0.1157
+      },
+      {
+        "feature": "Volatility",
+        "importance": 0.1121
+      },
+      {
+        "feature": "News Sentiment",
+        "importance": 0.112
+      }
+    ],
+    "recent_news": [
+      {
+        "title": "NFLX Stock Reverses Course Overnight: Retail Shrugs Off Outgoing Chairman’s Sale As ‘Routine’",
+        "source": "Stocktwits",
+        "publishedAt": "2026-06-03T04:25:41.000Z"
+      },
+      {
+        "title": "Netflix (NFLX) Stock Falls Amid Market Uptick: What Investors Need to Know",
+        "source": "Zacks",
+        "publishedAt": "2026-06-02T21:45:03.000Z"
+      },
+      {
+        "title": "Why Did Netflix Stock Fall Even Though the Business Kept Growing?",
+        "source": "Motley Fool",
+        "publishedAt": "2026-06-02T21:31:00.000Z"
+      },
+      {
+        "title": "Netflix Insider Sold Shares Worth $33,244,035, According to a Recent SEC Filing",
+        "source": "MT Newswires",
+        "publishedAt": "2026-06-02T20:20:32.000Z"
+      },
+      {
+        "title": "A Look At Netflix (NFLX) Valuation As Live Content And Franchise Deals Broaden Its Business Model",
+        "source": "Simply Wall St.",
+        "publishedAt": "2026-06-02T16:10:01.000Z"
+      }
+    ]
+  },
+  "model_info": {
+    "algorithm": "LSTM (Long Short-Term Memory)",
+    "text_processing": "TF-IDF + VADER Sentiment",
+    "features_used": [
+      "Price Returns",
+      "Moving Average Ratio",
+      "Volatility",
+      "Volume Change",
+      "Price Range",
+      "Momentum",
+      "News Sentiment",
+      "RSI Indicator",
+      "MACD Histogram"
+    ],
+    "training_samples": 188,
+    "test_samples": 47,
+    "sequence_length": 7,
+    "epochs": 50
+  },
+  "symbol": "NFLX"
+}

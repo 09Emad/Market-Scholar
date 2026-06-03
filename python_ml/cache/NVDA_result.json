@@ -1,0 +1,158 @@
+{
+  "direction": "down",
+  "confidence": 0.5037,
+  "model_metrics": {
+    "accuracy": 0.4468,
+    "precision": 0.5185,
+    "recall": 0.5185,
+    "f1_score": 0.5185
+  },
+  "feature_importance": [
+    {
+      "feature": "Momentum",
+      "importance": 0.2983
+    },
+    {
+      "feature": "Price Returns",
+      "importance": 0.205
+    },
+    {
+      "feature": "RSI Indicator",
+      "importance": 0.183
+    },
+    {
+      "feature": "Volume Change",
+      "importance": 0.0869
+    },
+    {
+      "feature": "Volatility",
+      "importance": 0.0466
+    },
+    {
+      "feature": "Moving Average Ratio",
+      "importance": 0.0463
+    },
+    {
+      "feature": "Price Range",
+      "importance": 0.0458
+    },
+    {
+      "feature": "News Sentiment",
+      "importance": 0.045
+    },
+    {
+      "feature": "MACD Histogram",
+      "importance": 0.0431
+    }
+  ],
+  "factors": {
+    "technical_score": 0.5698,
+    "sentiment_score": 0.5315,
+    "volume_signal": "Normal volume",
+    "price_action": "Strong upward trend",
+    "news_impact": "Mixed/neutral news sentiment"
+  },
+  "analysis_report": [
+    {
+      "title": "Summary",
+      "icon": "summary",
+      "content": "Based on LSTM neural network analysis of NVDA's recent market data, the model predicts an downward price movement for the next trading day with low confidence (50%). This prediction is derived from a combination of technical indicators, price momentum, trading volume patterns, and news sentiment analysis."
+    },
+    {
+      "title": "Price Action & Trend",
+      "icon": "trend",
+      "content": "NVDA has shown a strong upward trend over the recent period, with an average daily return of +0.7%. Over the last 20 trading sessions, the stock moved from $196.50 to $222.82 (+13.39%). The technical score of 57% suggests a neutral technical outlook."
+    },
+    {
+      "title": "Volume Analysis",
+      "icon": "volume",
+      "content": "Trading volume is near the average level (ratio: 1.11x), suggesting normal market participation. This indicates steady interest without extreme buying or selling pressure."
+    },
+    {
+      "title": "News Sentiment",
+      "icon": "news",
+      "content": "News sentiment analysis shows a neutral score of 53%. Recent news coverage about NVDA is mixed, with balanced positive and negative reports. A neutral sentiment suggests the market is undecided about future direction."
+    },
+    {
+      "title": "Key Drivers",
+      "icon": "drivers",
+      "content": "The LSTM model identified the most influential factors for this prediction as: Momentum (30%), Price Returns (20%), RSI Indicator (18%). Price momentum is the dominant driver, indicating the model is primarily following the recent trend direction."
+    },
+    {
+      "title": "Model Confidence",
+      "icon": "model",
+      "content": "The LSTM model achieved 45% accuracy and 52% F1-score on the test dataset. These metrics indicate limited predictive reliability. Stock markets are inherently unpredictable, and predictions should be treated with caution. This model is designed for educational and research purposes only and should not be used as the sole basis for investment decisions."
+    }
+  ],
+  "explain_payload": {
+    "symbol": "NVDA",
+    "lstm_direction": "down",
+    "lstm_confidence": 0.5037,
+    "technical_score": 0.5698,
+    "price_action": "Strong upward trend",
+    "volume_signal": "Normal volume",
+    "sentiment_score": 0.5315,
+    "news_impact": "Mixed/neutral news sentiment",
+    "top_feature_importance": [
+      {
+        "feature": "Momentum",
+        "importance": 0.2983
+      },
+      {
+        "feature": "Price Returns",
+        "importance": 0.205
+      },
+      {
+        "feature": "RSI Indicator",
+        "importance": 0.183
+      }
+    ],
+    "recent_news": [
+      {
+        "title": "What Higher-for-Longer Interest Rates Mean for Bank Stocks",
+        "source": "Motley Fool",
+        "publishedAt": "2026-06-03T11:39:00.000Z"
+      },
+      {
+        "title": "Better AI Stock to Buy: Alphabet vs. Microsoft. (The Winner Might Surprise You)",
+        "source": "Motley Fool",
+        "publishedAt": "2026-06-03T11:35:00.000Z"
+      },
+      {
+        "title": "Walmart vs. Target: Which Retailer Is the Better Long-Term Hold?",
+        "source": "24/7 Wall St.",
+        "publishedAt": "2026-06-03T11:30:37.000Z"
+      },
+      {
+        "title": "Arm vs. NVIDIA: Which Semiconductor Stock Belongs in Your 10-Year Portfolio?",
+        "source": "24/7 Wall St.",
+        "publishedAt": "2026-06-03T11:30:25.000Z"
+      },
+      {
+        "title": "Jim Cramer admits he was wrong about Amazon — now calls its AI chips a real threat to Nvidia",
+        "source": "Moneywise",
+        "publishedAt": "2026-06-03T11:30:00.000Z"
+      }
+    ]
+  },
+  "model_info": {
+    "algorithm": "LSTM (Long Short-Term Memory)",
+    "text_processing": "TF-IDF + VADER Sentiment",
+    "features_used": [
+      "Price Returns",
+      "Moving Average Ratio",
+      "Volatility",
+      "Volume Change",
+      "Price Range",
+      "Momentum",
+      "News Sentiment",
+      "RSI Indicator",
+      "MACD Histogram"
+    ],
+    "training_samples": 188,
+    "test_samples": 47,
+    "sequence_length": 7,
+    "epochs": 50
+  },
+  "symbol": "NVDA"
+}

@@ -7,7 +7,7 @@
     "dev": "npx cross-env NODE_ENV=development tsx server/index.ts",
     "dev:all": "npm run dev",
     "start": "NODE_ENV=production node dist/index.cjs",
-    "build": "tsc",
+    "build": "tsc && tsx script/build.ts",
     "check": "tsc",
     "test:llm": "tsx script/test-llm-explainer.ts",
     "db:push": "drizzle-kit push --config=drizzle.config.js"

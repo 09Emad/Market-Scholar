@@ -1,0 +1,158 @@
+{
+  "direction": "down",
+  "confidence": 0.5158,
+  "model_metrics": {
+    "accuracy": 0.4894,
+    "precision": 0.6,
+    "recall": 0.3333,
+    "f1_score": 0.4286
+  },
+  "feature_importance": [
+    {
+      "feature": "MACD Histogram",
+      "importance": 0.1816
+    },
+    {
+      "feature": "Moving Average Ratio",
+      "importance": 0.1726
+    },
+    {
+      "feature": "Volatility",
+      "importance": 0.1708
+    },
+    {
+      "feature": "Momentum",
+      "importance": 0.1347
+    },
+    {
+      "feature": "Price Returns",
+      "importance": 0.109
+    },
+    {
+      "feature": "Volume Change",
+      "importance": 0.071
+    },
+    {
+      "feature": "Price Range",
+      "importance": 0.0639
+    },
+    {
+      "feature": "RSI Indicator",
+      "importance": 0.0519
+    },
+    {
+      "feature": "News Sentiment",
+      "importance": 0.0444
+    }
+  ],
+  "factors": {
+    "technical_score": 0.5552,
+    "sentiment_score": 0.5362,
+    "volume_signal": "Normal volume",
+    "price_action": "Strong upward trend",
+    "news_impact": "Mixed/neutral news sentiment"
+  },
+  "analysis_report": [
+    {
+      "title": "Summary",
+      "icon": "summary",
+      "content": "Based on LSTM neural network analysis of AAPL's recent market data, the model predicts an downward price movement for the next trading day with low confidence (52%). This prediction is derived from a combination of technical indicators, price momentum, trading volume patterns, and news sentiment analysis."
+    },
+    {
+      "title": "Price Action & Trend",
+      "icon": "trend",
+      "content": "AAPL has shown a strong upward trend over the recent period, with an average daily return of +0.55%. Over the last 20 trading sessions, the stock moved from $284.18 to $315.20 (+10.92%). The technical score of 56% suggests a neutral technical outlook."
+    },
+    {
+      "title": "Volume Analysis",
+      "icon": "volume",
+      "content": "Trading volume is near the average level (ratio: 0.94x), suggesting normal market participation. This indicates steady interest without extreme buying or selling pressure."
+    },
+    {
+      "title": "News Sentiment",
+      "icon": "news",
+      "content": "News sentiment analysis shows a neutral score of 54%. Recent news coverage about AAPL is mixed, with balanced positive and negative reports. A neutral sentiment suggests the market is undecided about future direction."
+    },
+    {
+      "title": "Key Drivers",
+      "icon": "drivers",
+      "content": "The LSTM model identified the most influential factors for this prediction as: MACD Histogram (18%), Moving Average Ratio (17%), Volatility (17%). MACD Histogram is the most significant factor in the model's decision-making process."
+    },
+    {
+      "title": "Model Confidence",
+      "icon": "model",
+      "content": "The LSTM model achieved 49% accuracy and 43% F1-score on the test dataset. These metrics indicate limited predictive reliability. Stock markets are inherently unpredictable, and predictions should be treated with caution. This model is designed for educational and research purposes only and should not be used as the sole basis for investment decisions."
+    }
+  ],
+  "explain_payload": {
+    "symbol": "AAPL",
+    "lstm_direction": "down",
+    "lstm_confidence": 0.5158,
+    "technical_score": 0.5552,
+    "price_action": "Strong upward trend",
+    "volume_signal": "Normal volume",
+    "sentiment_score": 0.5362,
+    "news_impact": "Mixed/neutral news sentiment",
+    "top_feature_importance": [
+      {
+        "feature": "MACD Histogram",
+        "importance": 0.1816
+      },
+      {
+        "feature": "Moving Average Ratio",
+        "importance": 0.1726
+      },
+      {
+        "feature": "Volatility",
+        "importance": 0.1708
+      }
+    ],
+    "recent_news": [
+      {
+        "title": "Why Apple Stock Soared 15% in May",
+        "source": "Motley Fool",
+        "publishedAt": "2026-06-03T10:57:21.000Z"
+      },
+      {
+        "title": "Amazon Claims No. 1 Spot on the Fortune 500",
+        "source": "PR Newswire",
+        "publishedAt": "2026-06-03T10:00:00.000Z"
+      },
+      {
+        "title": "Congressman Looking For Dividends? Taylor Ditches 2 Magnificent Seven Stocks For Blue Chips",
+        "source": "Benzinga",
+        "publishedAt": "2026-06-03T09:46:05.000Z"
+      },
+      {
+        "title": "Warren Buffett's Successor, Greg Abel, Has More Than 28% of Berkshire Hathaway's $330 Billion Portfolio Invested in 2 AI Titans",
+        "source": "Motley Fool",
+        "publishedAt": "2026-06-03T09:26:00.000Z"
+      },
+      {
+        "title": "Apple agrees to submit India financials in long-pending antitrust case",
+        "source": "Reuters",
+        "publishedAt": "2026-06-03T09:20:55.000Z"
+      }
+    ]
+  },
+  "model_info": {
+    "algorithm": "LSTM (Long Short-Term Memory)",
+    "text_processing": "TF-IDF + VADER Sentiment",
+    "features_used": [
+      "Price Returns",
+      "Moving Average Ratio",
+      "Volatility",
+      "Volume Change",
+      "Price Range",
+      "Momentum",
+      "News Sentiment",
+      "RSI Indicator",
+      "MACD Histogram"
+    ],
+    "training_samples": 188,
+    "test_samples": 47,
+    "sequence_length": 7,
+    "epochs": 50
+  },
+  "symbol": "AAPL"
+}

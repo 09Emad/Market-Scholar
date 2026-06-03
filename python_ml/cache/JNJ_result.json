@@ -1,0 +1,158 @@
+{
+  "direction": "up",
+  "confidence": 0.5366,
+  "model_metrics": {
+    "accuracy": 0.4043,
+    "precision": 0.4043,
+    "recall": 1.0,
+    "f1_score": 0.5758
+  },
+  "feature_importance": [
+    {
+      "feature": "Moving Average Ratio",
+      "importance": 0.1192
+    },
+    {
+      "feature": "MACD Histogram",
+      "importance": 0.1136
+    },
+    {
+      "feature": "RSI Indicator",
+      "importance": 0.1131
+    },
+    {
+      "feature": "Volatility",
+      "importance": 0.1108
+    },
+    {
+      "feature": "Price Range",
+      "importance": 0.1101
+    },
+    {
+      "feature": "Momentum",
+      "importance": 0.1099
+    },
+    {
+      "feature": "Price Returns",
+      "importance": 0.1086
+    },
+    {
+      "feature": "Volume Change",
+      "importance": 0.1079
+    },
+    {
+      "feature": "News Sentiment",
+      "importance": 0.1069
+    }
+  ],
+  "factors": {
+    "technical_score": 0.4945,
+    "sentiment_score": 0.5036,
+    "volume_signal": "Low volume - below average",
+    "price_action": "Slight downward trend",
+    "news_impact": "Mixed/neutral news sentiment"
+  },
+  "analysis_report": [
+    {
+      "title": "Summary",
+      "icon": "summary",
+      "content": "Based on LSTM neural network analysis of JNJ's recent market data, the model predicts an upward price movement for the next trading day with low confidence (54%). This prediction is derived from a combination of technical indicators, price momentum, trading volume patterns, and news sentiment analysis."
+    },
+    {
+      "title": "Price Action & Trend",
+      "icon": "trend",
+      "content": "JNJ has shown a slight downward trend recently, with an average daily return of -0.06%. Over the last 20 trading sessions, the stock moved from $225.55 to $222.89 (-1.18%). The technical score of 49% suggests a neutral technical outlook."
+    },
+    {
+      "title": "Volume Analysis",
+      "icon": "volume",
+      "content": "Trading volume is below average (ratio: 0.74x), indicating reduced market participation. Low volume may suggest uncertainty or a potential consolidation phase."
+    },
+    {
+      "title": "News Sentiment",
+      "icon": "news",
+      "content": "News sentiment analysis shows a neutral score of 50%. Recent news coverage about JNJ is mixed, with balanced positive and negative reports. A neutral sentiment suggests the market is undecided about future direction."
+    },
+    {
+      "title": "Key Drivers",
+      "icon": "drivers",
+      "content": "The LSTM model identified the most influential factors for this prediction as: Moving Average Ratio (12%), MACD Histogram (11%), RSI Indicator (11%). Moving Average Ratio is the most significant factor in the model's decision-making process."
+    },
+    {
+      "title": "Model Confidence",
+      "icon": "model",
+      "content": "The LSTM model achieved 40% accuracy and 58% F1-score on the test dataset. These metrics indicate limited predictive reliability. Stock markets are inherently unpredictable, and predictions should be treated with caution. This model is designed for educational and research purposes only and should not be used as the sole basis for investment decisions."
+    }
+  ],
+  "explain_payload": {
+    "symbol": "JNJ",
+    "lstm_direction": "up",
+    "lstm_confidence": 0.5366,
+    "technical_score": 0.4945,
+    "price_action": "Slight downward trend",
+    "volume_signal": "Low volume - below average",
+    "sentiment_score": 0.5036,
+    "news_impact": "Mixed/neutral news sentiment",
+    "top_feature_importance": [
+      {
+        "feature": "Moving Average Ratio",
+        "importance": 0.1192
+      },
+      {
+        "feature": "MACD Histogram",
+        "importance": 0.1136
+      },
+      {
+        "feature": "RSI Indicator",
+        "importance": 0.1131
+      }
+    ],
+    "recent_news": [
+      {
+        "title": "Johnson & Johnson late-breaking results show nipocalimab significantly reduced systemic lupus erythematosus (SLE) disease activity in a Phase 2 study",
+        "source": "PR Newswire",
+        "publishedAt": "2026-06-03T04:04:00.000Z"
+      },
+      {
+        "title": "Johnson & Johnson presents new data further reinforcing the role of nipocalimab in lowering the autoantibodies driving Sjögren's disease",
+        "source": "PR Newswire",
+        "publishedAt": "2026-06-03T04:03:00.000Z"
+      },
+      {
+        "title": "Nanobiotix Provides First Quarter 2026 Operational and Financial Update",
+        "source": "GlobeNewswire",
+        "publishedAt": "2026-06-02T20:30:00.000Z"
+      },
+      {
+        "title": "Even If Eli Lilly Stock Continues to Shine, Stay Away from This Pharmaceutical ETF",
+        "source": "Barchart",
+        "publishedAt": "2026-06-02T19:02:50.000Z"
+      },
+      {
+        "title": "Johnson & Johnson Hopes to Dethrone AbbVie's Biggest Growth Driver. Here's Why Investors Shouldn't Panic",
+        "source": "Motley Fool",
+        "publishedAt": "2026-06-02T18:50:00.000Z"
+      }
+    ]
+  },
+  "model_info": {
+    "algorithm": "LSTM (Long Short-Term Memory)",
+    "text_processing": "TF-IDF + VADER Sentiment",
+    "features_used": [
+      "Price Returns",
+      "Moving Average Ratio",
+      "Volatility",
+      "Volume Change",
+      "Price Range",
+      "Momentum",
+      "News Sentiment",
+      "RSI Indicator",
+      "MACD Histogram"
+    ],
+    "training_samples": 188,
+    "test_samples": 47,
+    "sequence_length": 7,
+    "epochs": 50
+  },
+  "symbol": "JNJ"
+}

@@ -1,0 +1,158 @@
+{
+  "direction": "up",
+  "confidence": 0.5063,
+  "model_metrics": {
+    "accuracy": 0.5532,
+    "precision": 0.5532,
+    "recall": 1.0,
+    "f1_score": 0.7123
+  },
+  "feature_importance": [
+    {
+      "feature": "News Sentiment",
+      "importance": 0.1162
+    },
+    {
+      "feature": "Momentum",
+      "importance": 0.1161
+    },
+    {
+      "feature": "Price Range",
+      "importance": 0.1136
+    },
+    {
+      "feature": "Price Returns",
+      "importance": 0.113
+    },
+    {
+      "feature": "Volatility",
+      "importance": 0.1117
+    },
+    {
+      "feature": "MACD Histogram",
+      "importance": 0.1107
+    },
+    {
+      "feature": "Moving Average Ratio",
+      "importance": 0.1094
+    },
+    {
+      "feature": "Volume Change",
+      "importance": 0.1049
+    },
+    {
+      "feature": "RSI Indicator",
+      "importance": 0.1044
+    }
+  ],
+  "factors": {
+    "technical_score": 0.4257,
+    "sentiment_score": 0.4846,
+    "volume_signal": "Normal volume",
+    "price_action": "Strong downward trend",
+    "news_impact": "Mixed/neutral news sentiment"
+  },
+  "analysis_report": [
+    {
+      "title": "Summary",
+      "icon": "summary",
+      "content": "Based on LSTM neural network analysis of WMT's recent market data, the model predicts an upward price movement for the next trading day with low confidence (51%). This prediction is derived from a combination of technical indicators, price momentum, trading volume patterns, and news sentiment analysis."
+    },
+    {
+      "title": "Price Action & Trend",
+      "icon": "trend",
+      "content": "WMT has shown a strong downward trend over the recent period, with an average daily return of -0.74%. Over the last 20 trading sessions, the stock moved from $130.79 to $113.06 (-13.56%). The technical score of 43% suggests a neutral technical outlook."
+    },
+    {
+      "title": "Volume Analysis",
+      "icon": "volume",
+      "content": "Trading volume is near the average level (ratio: 1.19x), suggesting normal market participation. This indicates steady interest without extreme buying or selling pressure."
+    },
+    {
+      "title": "News Sentiment",
+      "icon": "news",
+      "content": "News sentiment analysis shows a neutral score of 48%. Recent news coverage about WMT is mixed, with balanced positive and negative reports. A neutral sentiment suggests the market is undecided about future direction."
+    },
+    {
+      "title": "Key Drivers",
+      "icon": "drivers",
+      "content": "The LSTM model identified the most influential factors for this prediction as: News Sentiment (12%), Momentum (12%), Price Range (11%). News sentiment is the dominant driver, suggesting external events are heavily influencing the forecast."
+    },
+    {
+      "title": "Model Confidence",
+      "icon": "model",
+      "content": "The LSTM model achieved 55% accuracy and 71% F1-score on the test dataset. These metrics indicate limited predictive reliability. Stock markets are inherently unpredictable, and predictions should be treated with caution. This model is designed for educational and research purposes only and should not be used as the sole basis for investment decisions."
+    }
+  ],
+  "explain_payload": {
+    "symbol": "WMT",
+    "lstm_direction": "up",
+    "lstm_confidence": 0.5063,
+    "technical_score": 0.4257,
+    "price_action": "Strong downward trend",
+    "volume_signal": "Normal volume",
+    "sentiment_score": 0.4846,
+    "news_impact": "Mixed/neutral news sentiment",
+    "top_feature_importance": [
+      {
+        "feature": "News Sentiment",
+        "importance": 0.1162
+      },
+      {
+        "feature": "Momentum",
+        "importance": 0.1161
+      },
+      {
+        "feature": "Price Range",
+        "importance": 0.1136
+      }
+    ],
+    "recent_news": [
+      {
+        "title": "Walmart vs. Target: Which Retailer Is the Better Long-Term Hold?",
+        "source": "24/7 Wall St.",
+        "publishedAt": "2026-06-03T11:30:37.000Z"
+      },
+      {
+        "title": "Walmart launches new programme to boost supply chain efficiency",
+        "source": "Just Style",
+        "publishedAt": "2026-06-03T11:03:46.000Z"
+      },
+      {
+        "title": "3 Outstanding Dividend Stocks to Buy on the Dip and Hold for 10 Years",
+        "source": "Motley Fool",
+        "publishedAt": "2026-06-03T10:50:00.000Z"
+      },
+      {
+        "title": "Amazon Claims No. 1 Spot on the Fortune 500",
+        "source": "PR Newswire",
+        "publishedAt": "2026-06-03T10:00:00.000Z"
+      },
+      {
+        "title": "Forget the Mag 7: Focus on AI infrastructure",
+        "source": "Yahoo Finance Video",
+        "publishedAt": "2026-06-03T10:00:00.000Z"
+      }
+    ]
+  },
+  "model_info": {
+    "algorithm": "LSTM (Long Short-Term Memory)",
+    "text_processing": "TF-IDF + VADER Sentiment",
+    "features_used": [
+      "Price Returns",
+      "Moving Average Ratio",
+      "Volatility",
+      "Volume Change",
+      "Price Range",
+      "Momentum",
+      "News Sentiment",
+      "RSI Indicator",
+      "MACD Histogram"
+    ],
+    "training_samples": 188,
+    "test_samples": 47,
+    "sequence_length": 7,
+    "epochs": 50
+  },
+  "symbol": "WMT"
+}

@@ -1,0 +1,158 @@
+{
+  "direction": "up",
+  "confidence": 0.5062,
+  "model_metrics": {
+    "accuracy": 0.5319,
+    "precision": 0.5319,
+    "recall": 1.0,
+    "f1_score": 0.6944
+  },
+  "feature_importance": [
+    {
+      "feature": "Volatility",
+      "importance": 0.1216
+    },
+    {
+      "feature": "MACD Histogram",
+      "importance": 0.1136
+    },
+    {
+      "feature": "Momentum",
+      "importance": 0.1129
+    },
+    {
+      "feature": "Price Returns",
+      "importance": 0.1104
+    },
+    {
+      "feature": "Volume Change",
+      "importance": 0.1102
+    },
+    {
+      "feature": "Moving Average Ratio",
+      "importance": 0.1092
+    },
+    {
+      "feature": "RSI Indicator",
+      "importance": 0.1085
+    },
+    {
+      "feature": "News Sentiment",
+      "importance": 0.1081
+    },
+    {
+      "feature": "Price Range",
+      "importance": 0.1055
+    }
+  ],
+  "factors": {
+    "technical_score": 0.5106,
+    "sentiment_score": 0.5388,
+    "volume_signal": "Low volume - below average",
+    "price_action": "Slight upward trend",
+    "news_impact": "Mixed/neutral news sentiment"
+  },
+  "analysis_report": [
+    {
+      "title": "Summary",
+      "icon": "summary",
+      "content": "Based on LSTM neural network analysis of INTC's recent market data, the model predicts an upward price movement for the next trading day with low confidence (51%). This prediction is derived from a combination of technical indicators, price momentum, trading volume patterns, and news sentiment analysis."
+    },
+    {
+      "title": "Price Action & Trend",
+      "icon": "trend",
+      "content": "INTC has shown a slight upward trend recently, with a modest average daily return of +0.11%. Over the last 20 trading sessions, the stock moved from $108.15 to $107.93 (-0.2%). The technical score of 51% suggests a neutral technical outlook."
+    },
+    {
+      "title": "Volume Analysis",
+      "icon": "volume",
+      "content": "Trading volume is below average (ratio: 0.75x), indicating reduced market participation. Low volume may suggest uncertainty or a potential consolidation phase."
+    },
+    {
+      "title": "News Sentiment",
+      "icon": "news",
+      "content": "News sentiment analysis shows a neutral score of 54%. Recent news coverage about INTC is mixed, with balanced positive and negative reports. A neutral sentiment suggests the market is undecided about future direction."
+    },
+    {
+      "title": "Key Drivers",
+      "icon": "drivers",
+      "content": "The LSTM model identified the most influential factors for this prediction as: Volatility (12%), MACD Histogram (11%), Momentum (11%). Market volatility is the dominant driver, suggesting high uncertainty in the current market conditions."
+    },
+    {
+      "title": "Model Confidence",
+      "icon": "model",
+      "content": "The LSTM model achieved 53% accuracy and 69% F1-score on the test dataset. These metrics indicate limited predictive reliability. Stock markets are inherently unpredictable, and predictions should be treated with caution. This model is designed for educational and research purposes only and should not be used as the sole basis for investment decisions."
+    }
+  ],
+  "explain_payload": {
+    "symbol": "INTC",
+    "lstm_direction": "up",
+    "lstm_confidence": 0.5062,
+    "technical_score": 0.5106,
+    "price_action": "Slight upward trend",
+    "volume_signal": "Low volume - below average",
+    "sentiment_score": 0.5388,
+    "news_impact": "Mixed/neutral news sentiment",
+    "top_feature_importance": [
+      {
+        "feature": "Volatility",
+        "importance": 0.1216
+      },
+      {
+        "feature": "MACD Histogram",
+        "importance": 0.1136
+      },
+      {
+        "feature": "Momentum",
+        "importance": 0.1129
+      }
+    ],
+    "recent_news": [
+      {
+        "title": "Better AI Stock to Buy: Alphabet vs. Microsoft. (The Winner Might Surprise You)",
+        "source": "Motley Fool",
+        "publishedAt": "2026-06-03T11:35:00.000Z"
+      },
+      {
+        "title": "Intel's new AI chip skips the costly memory Nvidia relies on",
+        "source": "TheStreet",
+        "publishedAt": "2026-06-03T11:03:00.000Z"
+      },
+      {
+        "title": "Better Fintech Stock for Growth Investors: Nu Holdings vs. SoFi",
+        "source": "Motley Fool",
+        "publishedAt": "2026-06-03T10:35:00.000Z"
+      },
+      {
+        "title": "Remitly's Path to Profitability Is Becoming Clearer. Here's What's Driving It.",
+        "source": "Motley Fool",
+        "publishedAt": "2026-06-03T10:25:00.000Z"
+      },
+      {
+        "title": "Should You Buy Bitcoin While It's Under $80,000? The Answer Might Surprise You.",
+        "source": "Motley Fool",
+        "publishedAt": "2026-06-03T09:20:00.000Z"
+      }
+    ]
+  },
+  "model_info": {
+    "algorithm": "LSTM (Long Short-Term Memory)",
+    "text_processing": "TF-IDF + VADER Sentiment",
+    "features_used": [
+      "Price Returns",
+      "Moving Average Ratio",
+      "Volatility",
+      "Volume Change",
+      "Price Range",
+      "Momentum",
+      "News Sentiment",
+      "RSI Indicator",
+      "MACD Histogram"
+    ],
+    "training_samples": 188,
+    "test_samples": 47,
+    "sequence_length": 7,
+    "epochs": 50
+  },
+  "symbol": "INTC"
+}
