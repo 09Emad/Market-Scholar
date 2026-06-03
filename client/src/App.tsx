@@ -5,10 +5,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-toggle";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import AuthPage from "@/pages/auth-page";
+import { SplashScreen } from "@/components/splash-screen";
 
 function Redirect({ to }: { to: string }) {
   const [, setLocation] = useLocation();
@@ -33,11 +34,16 @@ function Router() {
 }
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <ThemeProvider>
           <AuthProvider>
+            {showSplash && (
+              <SplashScreen onComplete={() => setShowSplash(false)} />
+            )}
             <Toaster />
             <Router />
           </AuthProvider>
