@@ -27,7 +27,7 @@ export interface LLMExplanation {
   technicalReasoning: string[];
   newsAlignment: NewsAlignment;
   newsReasoning: string[];
-  combinedView: string;
+  combinedView: string; 
   riskFlags: string[];
   invalidations: string[];
   finalNote: string;

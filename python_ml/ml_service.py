@@ -181,23 +181,31 @@ def train_and_predict(prices, sentiment_score, symbol, news_articles=None):
     if len(X_train) < 5 or len(X_test) < 3:
         return generate_fallback_prediction(prices, sentiment_score)
 
-    from tensorflow.keras.callbacks import EarlyStopping
-    early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-
-    model = build_lstm_model((X.shape[1], X.shape[2]))
-
-    model.fit(X_train, y_train, epochs=30, batch_size=8, verbose=0,
-              validation_split=0.1, callbacks=[early_stop])
-
-    # Save model and scaler to cache
-    model_path = os.path.join(CACHE_DIR, f"{symbol}_model.keras")
-    scaler_path = os.path.join(CACHE_DIR, f"{symbol}_scaler.pkl")
     try:
-        model.save(model_path)
-        with open(scaler_path, "wb") as f:
-            pickle.dump(scaler, f)
+        from tensorflow.keras.callbacks import EarlyStopping
+        early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+
+        model = build_lstm_model((X.shape[1], X.shape[2]))
+        model.fit(X_train, y_train, epochs=30, batch_size=8, verbose=0,
+                  validation_split=0.1, callbacks=[early_stop])
+
+        # Save model and scaler to cache
+        model_path = os.path.join(CACHE_DIR, f"{symbol}_model.keras")
+        scaler_path = os.path.join(CACHE_DIR, f"{symbol}_scaler.pkl")
+        try:
+            model.save(model_path)
+            with open(scaler_path, "wb") as f:
+                pickle.dump(scaler, f)
+        except Exception as e:
+            print(f"Error saving model/scaler to cache for {symbol}: {e}")
+    except ModuleNotFoundError as e:
+        if 'tensorflow' in str(e).lower():
+            print("TensorFlow is not available. Using fallback prediction.")
+            return generate_fallback_prediction(prices, sentiment_score)
+        raise
     except Exception as e:
-        print(f"Error saving model/scaler to cache for {symbol}: {e}")
+        print(f"LSTM training failed ({e}). Using fallback prediction.")
+        return generate_fallback_prediction(prices, sentiment_score)
 
     y_pred_proba = model.predict(X_test, verbose=0)
     y_pred = (y_pred_proba > 0.5).astype(int).flatten()
