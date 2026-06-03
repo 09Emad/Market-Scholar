@@ -74,9 +74,7 @@ export default function AuthPage() {
 
         <div className="w-full max-w-md space-y-6 z-10">
           <div className="flex flex-col items-center text-center space-y-2 mb-4">
-            <div className="p-3 rounded-2xl bg-primary/10 text-primary">
-              <Brain className="h-8 w-8" />
-            </div>
+            <img src="/favicon.png" alt="StockVision AI" className="h-14 w-14 rounded-2xl shadow-md mb-2" />
             <h1 className="text-3xl font-extrabold tracking-tight">StockVision AI</h1>
             <p className="text-muted-foreground text-sm max-w-xs">
               Academic decision support platform for stock analysis and predictions using LSTM neural networks.

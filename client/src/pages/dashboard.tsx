@@ -151,9 +151,7 @@ useEffect(() => {
         <div className="max-w-[1400px] mx-auto px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-md bg-primary">
-                <Brain className="h-4 w-4 text-primary-foreground" />
-              </div>
+              <img src="/favicon.png" alt="StockVision" className="h-7 w-7 rounded-lg shadow-sm" />
               <h1 className="text-lg font-bold tracking-tight">StockVision</h1>
             </div>
             <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
