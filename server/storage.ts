@@ -1,14 +1,14 @@
 import { predictions, type Prediction, type InsertPrediction, users, type User, type InsertUser } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, isNull } from "drizzle-orm";
+import { eq, desc, isNull, and } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   createPrediction(prediction: InsertPrediction): Promise<Prediction>;
-  getPredictions(limit?: number): Promise<Prediction[]>;
-  getPredictionsBySymbol(symbol: string): Promise<Prediction[]>;
+  getPredictions(userId?: string, limit?: number): Promise<Prediction[]>;
+  getPredictionsBySymbol(symbol: string, userId?: string): Promise<Prediction[]>;
   updatePredictionOutcome(id: number, actualDirection: string, wasCorrect: number, actualPrice: number): Promise<void>;
   getUnvalidatedPredictions(): Promise<Prediction[]>;
 }
@@ -34,7 +34,15 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getPredictions(limit = 50): Promise<Prediction[]> {
+  async getPredictions(userId?: string, limit = 50): Promise<Prediction[]> {
+    if (userId) {
+      return db
+        .select()
+        .from(predictions)
+        .where(eq(predictions.userId, userId))
+        .orderBy(desc(predictions.predictionDate))
+        .limit(limit);
+    }
     return db
       .select()
       .from(predictions)
@@ -42,7 +50,19 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
   }
 
-  async getPredictionsBySymbol(symbol: string): Promise<Prediction[]> {
+  async getPredictionsBySymbol(symbol: string, userId?: string): Promise<Prediction[]> {
+    if (userId) {
+      return db
+        .select()
+        .from(predictions)
+        .where(
+          and(
+            eq(predictions.symbol, symbol),
+            eq(predictions.userId, userId)
+          )
+        )
+        .orderBy(desc(predictions.predictionDate));
+    }
     return db
       .select()
       .from(predictions)

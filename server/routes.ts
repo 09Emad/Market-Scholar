@@ -168,6 +168,7 @@ export async function registerRoutes(
       const expiryAt = getMarketCloseUTC(parsedTarget.getFullYear(), parsedTarget.getMonth(), parsedTarget.getDate()).toISOString();
 
       await storage.createPrediction({
+        userId: (req.user as any).id,
         symbol: symbol.toUpperCase(),
         targetDate: prediction.targetDate,
         targetExpiryAt: expiryAt,
@@ -188,12 +189,15 @@ export async function registerRoutes(
   });
 
   // --- مسارات التوقعات (Predictions Routes) ---
-  app.get("/api/predictions", async (_req, res) => {
+  app.get("/api/predictions", async (req, res) => {
     try {
       // تحديث وقت النشاط بمجرد جلب البيانات (يستخدمه الـ Cron Job)
       lastActiveTime = Date.now(); 
-      const predictions = await storage.getPredictions(50);
-      res.json(predictions);
+      if (req.isAuthenticated()) {
+        const predictions = await storage.getPredictions((req.user as any).id, 50);
+        return res.json(predictions);
+      }
+      return res.json([]);
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to fetch predictions" });
     }
@@ -202,8 +206,11 @@ export async function registerRoutes(
   app.get("/api/predictions/:symbol", async (req, res) => {
     try {
       const { symbol } = req.params;
-      const predictions = await storage.getPredictionsBySymbol(symbol.toUpperCase());
-      res.json(predictions);
+      if (req.isAuthenticated()) {
+        const predictions = await storage.getPredictionsBySymbol(symbol.toUpperCase(), (req.user as any).id);
+        return res.json(predictions);
+      }
+      return res.json([]);
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to fetch predictions" });
     }
