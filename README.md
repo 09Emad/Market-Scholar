@@ -163,7 +163,7 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "client", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
-    },
+    },                                    
   },
   root: path.resolve(import.meta.dirname, "client"),
   build: {
@@ -179,7 +179,6 @@ export default defineConfig({
 });
 ```
 
-This removes Replit-specific plugins that don't work locally.
 
 ## Step 7: Push Database Schema
 
@@ -231,5 +230,3 @@ pip install -r python_ml/requirements.txt
 ### Prediction shows "ML service unavailable"
 The Python ML service might not have started yet. Wait a few seconds after `npm run dev` and try again. The ML service needs time to initialize.
 
-### Replit plugins error
-If you see errors about `@replit/vite-plugin-*`, make sure you replaced `vite.config.ts` content as described in Step 6.
