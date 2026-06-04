@@ -820,6 +820,18 @@ def predict_endpoint():
     if not prices:
         return jsonify({'error': 'No price data provided'}), 400
 
+    # Check if a pre-calculated prediction result exists (always use if available to save CPU/RAM)
+    result_path = os.path.join(CACHE_DIR, f"{symbol}_result.json")
+    if os.path.exists(result_path):
+        try:
+            print(f"Returning cached prediction result for {symbol}...")
+            with open(result_path, "r", encoding="utf-8") as f:
+                res = json.load(f)
+            res['symbol'] = symbol
+            return jsonify(res)
+        except Exception as e:
+            print(f"Error reading cached result JSON for {symbol}: {e}")
+
     # Check if a fresh cached model and scaler exist (under 12 hours old)
     model_path = os.path.join(CACHE_DIR, f"{symbol}_model.keras")
     scaler_path = os.path.join(CACHE_DIR, f"{symbol}_scaler.pkl")
