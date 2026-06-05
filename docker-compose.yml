@@ -31,6 +31,9 @@ services:
       - OLLAMA_TIMEOUT_MS=90000
       - OLLAMA_MAX_RETRIES=2
       - OLLAMA_RETRY_DELAY_MS=3000
+      - SESSION_SECRET=${SESSION_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
     depends_on:
       - db
     extra_hosts:
