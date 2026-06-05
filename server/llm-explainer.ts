@@ -1,4 +1,5 @@
 import http from "http";
+import https from "https";
 
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://127.0.0.1:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3.2:3b-instruct-q4_0";
@@ -214,7 +215,136 @@ export function buildFallbackExplanation(payload: ExplainPayload, reason: string
   };
 }
 
+function httpsRequest(url: string, body: string): Promise<{ status: number; data: any }> {
+  return new Promise((resolve, reject) => {
+    const parsedUrl = new URL(url);
+    const req = https.request(
+      {
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port || 443,
+        path: parsedUrl.pathname + parsedUrl.search,
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        timeout: 20000,
+      },
+      (res) => {
+        let response = "";
+        res.on("data", (chunk) => { response += chunk; });
+        res.on("end", () => {
+          try {
+            resolve({ status: res.statusCode || 500, data: response ? JSON.parse(response) : {} });
+          } catch {
+            resolve({ status: res.statusCode || 500, data: response });
+          }
+        });
+      },
+    );
+
+    req.on("error", (err) => reject(err));
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("Gemini request timeout"));
+    });
+
+    req.write(body);
+    req.end();
+  });
+}
+
+async function generateGeminiExplanation(payload: ExplainPayload): Promise<LLMExplanation> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const requestBody = {
+    contents: [
+      {
+        role: "user",
+        parts: [{ text: userPrompt(payload) }]
+      }
+    ],
+    systemInstruction: {
+      parts: [{ text: systemPrompt() }]
+    },
+    generationConfig: {
+      temperature: 0.15,
+      responseMimeType: "application/json"
+    }
+  };
+
+  const response = await httpsRequest(url, JSON.stringify(requestBody));
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error(`Gemini returned status ${response.status}`);
+  }
+
+  const contentText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!contentText || typeof contentText !== "string") {
+    throw new Error("Missing Gemini explanation content");
+  }
+
+  const raw = parseJsonObject(contentText);
+  return validateExplanation(raw, payload);
+}
+
+async function generateGeminiChatResponse(
+  userMessage: string,
+  chatHistory: Array<{ role: "user" | "assistant" | "system"; content: string }>,
+  systemMessage: string
+): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const contents: any[] = [];
+  for (const msg of chatHistory) {
+    if (msg.role === "system") {
+      continue;
+    }
+    contents.push({
+      role: msg.role === "assistant" ? "model" : "user",
+      parts: [{ text: msg.content }]
+    });
+  }
+
+  contents.push({
+    role: "user",
+    parts: [{ text: userMessage }]
+  });
+
+  const requestBody = {
+    contents,
+    systemInstruction: {
+      parts: [{ text: systemMessage }]
+    },
+    generationConfig: {
+      temperature: 0.6,
+      maxOutputTokens: 400
+    }
+  };
+
+  const response = await httpsRequest(url, JSON.stringify(requestBody));
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error(`Gemini returned status ${response.status}`);
+  }
+
+  const contentText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!contentText) {
+    throw new Error("Empty Gemini chat response");
+  }
+
+  return contentText.trim();
+}
+
 export async function generateLLMExplanation(payload: ExplainPayload): Promise<LLMExplanation> {
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      console.log(`Generating explanation using Google Gemini API for ${payload.symbol}...`);
+      return await generateGeminiExplanation(payload);
+    } catch (err: any) {
+      console.error("Gemini explanation generation failed, falling back to Ollama:", err.message);
+    }
+  }
+
   const requestBody = {
     model: OLLAMA_MODEL,
     stream: false,
@@ -327,6 +457,14 @@ Current Price: $${stockContext.price} (Change: ${stockContext.change >= 0 ? "+" 
     }
     if (stockContext.recentNews && stockContext.recentNews.length > 0) {
       systemMessage += `Recent News Headlines & Sentiments:\n` + stockContext.recentNews.map(n => `- ${n.title} (Sentiment: ${n.sentiment || "Neutral"})`).join("\n") + "\n";
+    }
+  }
+
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      return await generateGeminiChatResponse(userMessage, chatHistory, systemMessage);
+    } catch (err: any) {
+      console.error("Gemini chat response failed, falling back to Ollama:", err.message);
     }
   }
 

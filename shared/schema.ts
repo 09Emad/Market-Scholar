@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, real, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, real, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -24,6 +24,12 @@ export const predictions = pgTable("predictions", {
   actualDirection: text("actual_direction"),
   actualPrice: real("actual_price"),
   wasCorrect: integer("was_correct"),
+}, (table) => {
+  return {
+    userIdIdx: index("predictions_user_id_idx").on(table.userId),
+    symbolIdx: index("predictions_symbol_idx").on(table.symbol),
+    wasCorrectIdx: index("predictions_was_correct_idx").on(table.wasCorrect),
+  };
 });
 
 export const authLogs = pgTable("auth_logs", {

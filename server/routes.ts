@@ -90,7 +90,8 @@ export async function registerRoutes(
   app.get("/api/stock/quote/:symbol", async (req, res) => {
     try {
       const { symbol } = req.params;
-      if (!symbol || symbol.length > 10) {
+      const symbolRegex = /^[A-Z0-9.-]+$/i;
+      if (!symbol || symbol.length > 10 || !symbolRegex.test(symbol)) {
         return res.status(400).json({ message: "Invalid stock symbol" });
       }
       const quote = await getStockQuote(symbol.toUpperCase());
@@ -102,11 +103,12 @@ export async function registerRoutes(
 
   app.get("/api/stock/batch-quotes", async (req, res) => {
     try {
+      const symbolRegex = /^[A-Z0-9.-]+$/;
       const symbolsParam = typeof req.query.symbols === "string" ? req.query.symbols : "";
       const symbols = symbolsParam
         .split(",")
         .map((s) => s.trim().toUpperCase())
-        .filter((s) => s.length > 0 && s.length <= 10);
+        .filter((s) => s.length > 0 && s.length <= 10 && symbolRegex.test(s));
 
       if (symbols.length === 0) {
         return res.json([]);
@@ -140,7 +142,8 @@ export async function registerRoutes(
     try {
       const { symbol, range } = req.params;
       const validRanges = ["1d", "1w", "1m", "3m", "6m", "1y"];
-      if (!symbol || symbol.length > 10 || !validRanges.includes(range)) {
+      const symbolRegex = /^[A-Z0-9.-]+$/i;
+      if (!symbol || symbol.length > 10 || !symbolRegex.test(symbol) || !validRanges.includes(range)) {
         return res.status(400).json({ message: "Invalid parameters" });
       }
       const history = await getStockHistory(symbol.toUpperCase(), range);
@@ -153,6 +156,10 @@ export async function registerRoutes(
   app.get("/api/stock/news/:symbol", async (req, res) => {
     try {
       const { symbol } = req.params;
+      const symbolRegex = /^[A-Z0-9.-]+$/i;
+      if (!symbol || symbol.length > 10 || !symbolRegex.test(symbol)) {
+        return res.status(400).json({ message: "Invalid stock symbol" });
+      }
       const news = await getStockNews(symbol.toUpperCase());
       const analyzed = await analyzeSentiment(news);
       res.json(analyzed);
@@ -164,6 +171,10 @@ export async function registerRoutes(
   app.post("/api/stock/predict", requireAuth, async (req, res) => {
     try {
       const { symbol } = req.body;
+      const symbolRegex = /^[A-Z0-9.-]+$/i;
+      if (!symbol || typeof symbol !== "string" || symbol.length > 10 || !symbolRegex.test(symbol)) {
+        return res.status(400).json({ message: "Invalid stock symbol" });
+      }
       const prediction = await generatePrediction(symbol.toUpperCase());
       const quote = await getStockQuote(symbol.toUpperCase()).catch(() => null);
       const parsedTarget = new Date(prediction.targetDate);
@@ -208,6 +219,10 @@ export async function registerRoutes(
   app.get("/api/predictions/:symbol", async (req, res) => {
     try {
       const { symbol } = req.params;
+      const symbolRegex = /^[A-Z0-9.-]+$/i;
+      if (!symbol || symbol.length > 10 || !symbolRegex.test(symbol)) {
+        return res.status(400).json({ message: "Invalid stock symbol" });
+      }
       if (req.isAuthenticated()) {
         const predictions = await storage.getPredictionsBySymbol(symbol.toUpperCase(), (req.user as any).id);
         return res.json(predictions);

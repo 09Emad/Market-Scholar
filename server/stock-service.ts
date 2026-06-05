@@ -151,6 +151,10 @@ async function fetchWithRetry(url: string, retries = 2): Promise<Response> {
 }
 
 export async function getStockQuote(symbol: string): Promise<StockQuote> {
+  const symbolRegex = /^[A-Z0-9.-]+$/;
+  if (!symbol || !symbolRegex.test(symbol.toUpperCase())) {
+    throw new Error("Invalid stock symbol format");
+  }
   try {
     const url = `${YAHOO_CHART_BASE}/${symbol}?interval=1d&range=5d`;
     const res = await fetchWithRetry(url);
@@ -200,6 +204,10 @@ export async function getStockHistory(
   symbol: string,
   range: string
 ): Promise<Array<{ date: string; close: number; open: number; high: number; low: number; volume: number }>> {
+  const symbolRegex = /^[A-Z0-9.-]+$/;
+  if (!symbol || !symbolRegex.test(symbol.toUpperCase())) {
+    throw new Error("Invalid stock symbol format");
+  }
   const cacheKey = `${symbol}:${range}`;
   const cached = historyCache.get(cacheKey);
   const now = Date.now();
@@ -260,6 +268,10 @@ export async function getStockHistory(
 }
 
 export async function getStockNews(symbol: string): Promise<NewsArticle[]> {
+  const symbolRegex = /^[A-Z0-9.-]+$/;
+  if (!symbol || !symbolRegex.test(symbol.toUpperCase())) {
+    throw new Error("Invalid stock symbol format");
+  }
   try {
     const url = `https://query1.finance.yahoo.com/v1/finance/search?q=${symbol}&newsCount=10&quotesCount=0`;
     const res = await fetchWithRetry(url);

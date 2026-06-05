@@ -31,10 +31,19 @@ export async function comparePasswords(supplied: string, hashed: string) {
   const [hash, salt] = hashed.split(".");
   if (!hash || !salt) return false;
   const buf = (await scrypt(supplied, salt, 64)) as Buffer;
-  return buf.toString("hex") === hash;
+  
+  const hashBuf = Buffer.from(hash, "hex");
+  if (buf.length !== hashBuf.length) return false;
+  return crypto.timingSafeEqual(buf, hashBuf);
 }
 
 export function setupAuth(app: Express) {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  if (isProduction && !process.env.SESSION_SECRET) {
+    throw new Error("SESSION_SECRET environment variable is required in production!");
+  }
+
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "market-scholar-session-secret-key-12345",
     resave: false,
@@ -47,13 +56,14 @@ export function setupAuth(app: Express) {
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       httpOnly: true,
-      secure: false,      // Must be false for plain HTTP (no HTTPS/SSL)
+      secure: isProduction,
       sameSite: "lax",    // Allow cookies on same-origin requests
     },
   };
 
-  // Do NOT set trust proxy for plain HTTP deployments - it can cause issues
-  // app.set("trust proxy", 1);  // Only needed behind HTTPS reverse proxy (nginx/caddy)
+  if (isProduction) {
+    app.set("trust proxy", 1);  // Only needed behind HTTPS reverse proxy (nginx/caddy)
+  }
 
   app.use(session(sessionSettings));
   app.use(passport.initialize());

@@ -239,6 +239,110 @@ def calibrate_confidence(raw_prob, temperature=0.6):
     return direction, confidence
 
 
+def build_prediction_response(prices, sentiment_score, symbol, news_articles, direction, confidence, importance, model_metrics, model_info_extras=None):
+    recent_prices = [p['close'] for p in prices[-20:]]
+    avg_change = np.mean(np.diff(recent_prices) / recent_prices[:-1]) if len(recent_prices) > 1 else 0
+    avg_volume = np.mean([p['volume'] for p in prices[-20:]]) if prices else 0
+    last_volume = prices[-1]['volume'] if prices else 0
+    volume_ratio = last_volume / avg_volume if avg_volume > 0 else 1
+
+    if avg_change > 0.005:
+        price_action = "Strong upward trend"
+    elif avg_change > 0:
+        price_action = "Slight upward trend"
+    elif avg_change > -0.005:
+        price_action = "Slight downward trend"
+    else:
+        price_action = "Strong downward trend"
+
+    if volume_ratio > 1.3:
+        volume_signal = "High volume - above average"
+    elif volume_ratio > 0.8:
+        volume_signal = "Normal volume"
+    else:
+        volume_signal = "Low volume - below average"
+
+    technical_score = float(np.clip(0.5 + avg_change * 10, 0, 1))
+    news_impact_desc = get_news_impact_description(sentiment_score)
+
+    analysis_report = generate_analysis_report(
+        symbol=symbol,
+        direction=direction,
+        confidence=confidence,
+        sentiment_score=sentiment_score,
+        technical_score=technical_score,
+        price_action=price_action,
+        volume_signal=volume_signal,
+        volume_ratio=volume_ratio,
+        avg_change=avg_change,
+        news_impact=news_impact_desc,
+        recent_prices=recent_prices,
+        importance=importance,
+        model_metrics=model_metrics
+    )
+
+    top_feature_importance = importance[:3] if importance else []
+    recent_news = []
+    for article in news_articles[:5]:
+        recent_news.append({
+            'title': article.get('title', ''),
+            'source': article.get('source', 'Unknown'),
+            'publishedAt': article.get('publishedAt', '')
+        })
+
+    explain_payload = {
+        'symbol': symbol,
+        'lstm_direction': direction,
+        'lstm_confidence': round(confidence, 4),
+        'technical_score': round(technical_score, 4),
+        'price_action': price_action,
+        'volume_signal': volume_signal,
+        'sentiment_score': round(sentiment_score, 4),
+        'news_impact': news_impact_desc,
+        'top_feature_importance': top_feature_importance,
+        'recent_news': recent_news
+    }
+
+    feature_names = [
+        'Price Returns', 'Moving Average Ratio', 'Volatility', 'Volume Change',
+        'Price Range', 'Momentum', 'News Sentiment', 'RSI Indicator', 'MACD Histogram',
+        'Bollinger Band Width', 'Bollinger Band Position', 'Stochastic %K', 'Stochastic %D',
+        'ATR (Volatility)', 'OBV (Volume Flow)', 'EMA Ratio'
+    ]
+
+    model_info = {
+        'algorithm': 'LSTM (Long Short-Term Memory)',
+        'text_processing': 'TF-IDF + VADER Sentiment',
+        'features_used': feature_names,
+        'sequence_length': 14,
+    }
+    if model_info_extras:
+        model_info.update(model_info_extras)
+
+    result = {
+        'direction': direction,
+        'confidence': round(confidence, 4),
+        'model_metrics': {
+            'accuracy': round(model_metrics['accuracy'], 4),
+            'precision': round(model_metrics['precision'], 4),
+            'recall': round(model_metrics['recall'], 4),
+            'f1_score': round(model_metrics['f1_score'], 4)
+        },
+        'feature_importance': importance,
+        'factors': {
+            'technical_score': round(technical_score, 4),
+            'sentiment_score': round(sentiment_score, 4),
+            'volume_signal': volume_signal,
+            'price_action': price_action,
+            'news_impact': news_impact_desc
+        },
+        'analysis_report': analysis_report,
+        'explain_payload': explain_payload,
+        'model_info': model_info
+    }
+    return result
+
+
 def train_and_predict(prices, sentiment_score, symbol, news_articles=None):
     sequence_length = 14
     news_articles = news_articles or []
@@ -323,101 +427,28 @@ def train_and_predict(prices, sentiment_score, symbol, news_articles=None):
 
     importance = compute_feature_importance(model, X_test, y_test, feature_names)
 
-    recent_prices = [p['close'] for p in prices[-20:]]
-    avg_change = np.mean(np.diff(recent_prices) / recent_prices[:-1]) if len(recent_prices) > 1 else 0
-    avg_volume = np.mean([p['volume'] for p in prices[-20:]]) if prices else 0
-    last_volume = prices[-1]['volume'] if prices else 0
-    volume_ratio = last_volume / avg_volume if avg_volume > 0 else 1
+    model_info_extras = {
+        'training_samples': len(X_train),
+        'test_samples': len(X_test),
+        'epochs': 50
+    }
 
-    if avg_change > 0.005:
-        price_action = "Strong upward trend"
-    elif avg_change > 0:
-        price_action = "Slight upward trend"
-    elif avg_change > -0.005:
-        price_action = "Slight downward trend"
-    else:
-        price_action = "Strong downward trend"
-
-    if volume_ratio > 1.3:
-        volume_signal = "High volume - above average"
-    elif volume_ratio > 0.8:
-        volume_signal = "Normal volume"
-    else:
-        volume_signal = "Low volume - below average"
-
-    technical_score = float(np.clip(0.5 + avg_change * 10, 0, 1))
-
-    news_impact_desc = get_news_impact_description(sentiment_score)
-
-    analysis_report = generate_analysis_report(
+    return build_prediction_response(
+        prices=prices,
+        sentiment_score=sentiment_score,
         symbol=symbol,
+        news_articles=news_articles,
         direction=direction,
         confidence=confidence,
-        sentiment_score=sentiment_score,
-        technical_score=technical_score,
-        price_action=price_action,
-        volume_signal=volume_signal,
-        volume_ratio=volume_ratio,
-        avg_change=avg_change,
-        news_impact=news_impact_desc,
-        recent_prices=recent_prices,
         importance=importance,
-        model_metrics={'accuracy': accuracy, 'precision': precision, 'recall': recall, 'f1_score': f1}
+        model_metrics={
+            'accuracy': accuracy,
+            'precision': precision,
+            'recall': recall,
+            'f1_score': f1
+        },
+        model_info_extras=model_info_extras
     )
-
-    top_feature_importance = importance[:3] if importance else []
-    recent_news = []
-    for article in news_articles[:5]:
-        recent_news.append({
-            'title': article.get('title', ''),
-            'source': article.get('source', 'Unknown'),
-            'publishedAt': article.get('publishedAt', '')
-        })
-
-    explain_payload = {
-        'symbol': symbol,
-        'lstm_direction': direction,
-        'lstm_confidence': round(confidence, 4),
-        'technical_score': round(technical_score, 4),
-        'price_action': price_action,
-        'volume_signal': volume_signal,
-        'sentiment_score': round(sentiment_score, 4),
-        'news_impact': news_impact_desc,
-        'top_feature_importance': top_feature_importance,
-        'recent_news': recent_news
-    }
-
-    result = {
-        'direction': direction,
-        'confidence': round(confidence, 4),
-        'model_metrics': {
-            'accuracy': round(accuracy, 4),
-            'precision': round(precision, 4),
-            'recall': round(recall, 4),
-            'f1_score': round(f1, 4)
-        },
-        'feature_importance': importance,
-        'factors': {
-            'technical_score': round(technical_score, 4),
-            'sentiment_score': round(sentiment_score, 4),
-            'volume_signal': volume_signal,
-            'price_action': price_action,
-            'news_impact': news_impact_desc
-        },
-        'analysis_report': analysis_report,
-        'explain_payload': explain_payload,
-        'model_info': {
-            'algorithm': 'LSTM (Long Short-Term Memory)',
-            'text_processing': 'TF-IDF + VADER Sentiment',
-            'features_used': feature_names,
-            'training_samples': len(X_train),
-            'test_samples': len(X_test),
-            'sequence_length': sequence_length,
-            'epochs': 50
-        }
-    }
-
-    return result
 
 
 def load_and_predict(prices, sentiment_score, symbol, news_articles=None):
@@ -483,96 +514,24 @@ def load_and_predict(prices, sentiment_score, symbol, news_articles=None):
     # Compute feature importance dynamically based on current test data
     importance = compute_feature_importance(model, X_test, y_test, feature_names)
 
-    recent_prices = [p['close'] for p in prices[-20:]]
-    avg_change = np.mean(np.diff(recent_prices) / recent_prices[:-1]) if len(recent_prices) > 1 else 0
-    avg_volume = np.mean([p['volume'] for p in prices[-20:]]) if prices else 0
-    last_volume = prices[-1]['volume'] if prices else 0
-    volume_ratio = last_volume / avg_volume if avg_volume > 0 else 1
+    model_info_extras = {
+        'training_samples': len(X) - len(X_test),
+        'test_samples': len(X_test),
+        'epochs': 30,
+        'is_live_inference': True
+    }
 
-    if avg_change > 0.005:
-        price_action = "Strong upward trend"
-    elif avg_change > 0:
-        price_action = "Slight upward trend"
-    elif avg_change > -0.005:
-        price_action = "Slight downward trend"
-    else:
-        price_action = "Strong downward trend"
-
-    if volume_ratio > 1.3:
-        volume_signal = "High volume - above average"
-    elif volume_ratio > 0.8:
-        volume_signal = "Normal volume"
-    else:
-        volume_signal = "Low volume - below average"
-
-    technical_score = float(np.clip(0.5 + avg_change * 10, 0, 1))
-    news_impact_desc = get_news_impact_description(sentiment_score)
-
-    analysis_report = generate_analysis_report(
+    return build_prediction_response(
+        prices=prices,
+        sentiment_score=sentiment_score,
         symbol=symbol,
+        news_articles=news_articles,
         direction=direction,
         confidence=confidence,
-        sentiment_score=sentiment_score,
-        technical_score=technical_score,
-        price_action=price_action,
-        volume_signal=volume_signal,
-        volume_ratio=volume_ratio,
-        avg_change=avg_change,
-        news_impact=news_impact_desc,
-        recent_prices=recent_prices,
         importance=importance,
-        model_metrics=metrics
+        model_metrics=metrics,
+        model_info_extras=model_info_extras
     )
-
-    top_feature_importance = importance[:3] if importance else []
-    recent_news = []
-    for article in news_articles[:5]:
-        recent_news.append({
-            'title': article.get('title', ''),
-            'source': article.get('source', 'Unknown'),
-            'publishedAt': article.get('publishedAt', '')
-        })
-
-    explain_payload = {
-        'symbol': symbol,
-        'lstm_direction': direction,
-        'lstm_confidence': round(confidence, 4),
-        'technical_score': round(technical_score, 4),
-        'price_action': price_action,
-        'volume_signal': volume_signal,
-        'sentiment_score': round(sentiment_score, 4),
-        'news_impact': news_impact_desc,
-        'top_feature_importance': top_feature_importance,
-        'recent_news': recent_news
-    }
-
-    result = {
-        'direction': direction,
-        'confidence': round(confidence, 4),
-        'model_metrics': metrics,
-        'feature_importance': importance,
-        'factors': {
-            'technical_score': round(technical_score, 4),
-            'sentiment_score': round(sentiment_score, 4),
-            'volume_signal': volume_signal,
-            'price_action': price_action,
-            'news_impact': news_impact_desc
-        },
-        'analysis_report': analysis_report,
-        'explain_payload': explain_payload,
-        'model_info': {
-            'algorithm': 'LSTM (Long Short-Term Memory)',
-            'text_processing': 'TF-IDF + VADER Sentiment',
-            'features_used': feature_names,
-            'training_samples': len(X) - len(X_test),
-            'test_samples': len(X_test),
-            'sequence_length': sequence_length,
-            'epochs': 30,
-            'is_live_inference': True
-        }
-    }
-
-    return result
 
 
 def compute_feature_importance(model, X_test, y_test, feature_names):
@@ -923,11 +882,22 @@ def predict_endpoint():
     import time
     data = request.get_json()
     symbol = data.get('symbol', '').upper()
+    import re
+    if not symbol or not re.match(r'^[A-Z0-9.-]+$', symbol):
+        return jsonify({'error': 'Invalid stock symbol'}), 400
     prices = data.get('prices', [])
     news_articles = data.get('news', [])
 
     if not prices:
         return jsonify({'error': 'No price data provided'}), 400
+
+    # Calculate average sentiment once
+    avg_sentiment = 0.5
+    if news_articles:
+        texts = [a.get('title', '') + ' ' + a.get('description', '') for a in news_articles]
+        sentiments = analyze_sentiment_tfidf(texts)
+        scores = [s['score'] for s in sentiments]
+        avg_sentiment = np.mean(scores) if scores else 0.5
 
     # Check if a fresh cached model and scaler exist (under 6 hours old)
     model_path = os.path.join(CACHE_DIR, f"{symbol}_model.keras")
@@ -938,26 +908,12 @@ def predict_endpoint():
         mtime = os.path.getmtime(model_path)
         if time.time() - mtime < 21600: # 6 hours - always use fresh market data for inference
             try:
-                avg_sentiment = 0.5
-                if news_articles:
-                    texts = [a.get('title', '') + ' ' + a.get('description', '') for a in news_articles]
-                    sentiments = analyze_sentiment_tfidf(texts)
-                    scores = [s['score'] for s in sentiments]
-                    avg_sentiment = np.mean(scores) if scores else 0.5
-
                 print(f"Running live inference using cached model for {symbol}...")
                 result = load_and_predict(prices, avg_sentiment, symbol, news_articles)
                 result['symbol'] = symbol
                 return jsonify(result)
             except Exception as e:
                 print(f"Error running live inference for {symbol}, falling back to training: {e}")
-
-    avg_sentiment = 0.5
-    if news_articles:
-        texts = [a.get('title', '') + ' ' + a.get('description', '') for a in news_articles]
-        sentiments = analyze_sentiment_tfidf(texts)
-        scores = [s['score'] for s in sentiments]
-        avg_sentiment = np.mean(scores) if scores else 0.5
 
     result = train_and_predict(prices, avg_sentiment, symbol, news_articles)
     result['symbol'] = symbol
