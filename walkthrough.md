@@ -183,6 +183,36 @@
 
 ![Live Secure Domain Auth Page](C:/Users/emada/.gemini/antigravity-ide/brain/ac180c77-b4a7-48fc-98df-ebdaca8a8bfb/stockvision_auth_page_1780622827537.png)
 
+---
+
+## 🚀 دليل تحديث الموقع أونلاين على السيرفر (VPS Deployment Guide)
+
+لتحديث الكود على السيرفر الفعلي وتطبيق التعديلات الجديدة، يرجى اتباع الخطوات التالية:
+
+### 1. جلب التحديثات البرمجية من جيت هاب
+قم بالاتصال بالسيرفر عبر SSH، انتقل إلى مجلد المشروع، واسحب التحديثات الجديدة:
+```bash
+# الانتقال لمجلد المشروع (عدل المسار حسب موقع المشروع على سيرفرك)
+cd /path/to/Market-Scholar
+
+# جلب آخر التعديلات
+git pull origin main
+```
+
+### 2. إعادة بناء الحاوية وتشغيلها
+لتشغيل الكود الجديد وبناء واجهة المستخدم المحدثة:
+```bash
+docker-compose down
+docker-compose up -d --build
+```
+
+### 3. تحديث هيكل قاعدة البيانات (Database Schema Migrations)
+لتطبيق تعديلات جدول المستخدمين (جعل كلمة المرور اختيارية وإضافة حقول جوجل) دون الحاجة لأي أدوات إضافية ودون فقدان أي حسابات مسجلة مسبقاً، قم بتشغيل هذا الأمر لتحديث قاعدة البيانات مباشرة:
+```bash
+docker exec -i market_scholar_db psql -U market_user -d market_scholar -c "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT UNIQUE; ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT; ALTER TABLE users ALTER COLUMN password DROP NOT NULL;"
+```
+
+
 
 
 
