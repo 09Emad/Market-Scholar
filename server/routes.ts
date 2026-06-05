@@ -5,6 +5,8 @@ import { getStockQuote, getStockHistory, getStockNews } from "./stock-service";
 import { analyzeSentiment, generatePrediction } from "./prediction-service";
 import { getMarketCloseUTC } from "./market-holidays";
 import { log } from "./index";
+import { generateAIChatResponse } from "./llm-explainer";
+
 
 // متغير لتتبع آخر نشاط للمستخدمين (المفتاح الذكي)
 export let lastActiveTime = 0;
@@ -223,6 +225,58 @@ export async function registerRoutes(
       res.json(result);
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to validate predictions" });
+    }
+  });
+
+  // مسار الـ AI Chatbot
+  app.post("/api/ai/chat", requireAuth, async (req, res) => {
+    try {
+      const { message, chatHistory, symbol } = req.body;
+      if (!message || typeof message !== "string") {
+        return res.status(400).json({ message: "Message is required" });
+      }
+
+      let stockContext = undefined;
+      if (symbol && typeof symbol === "string" && symbol.length <= 10) {
+        const uppercaseSymbol = symbol.toUpperCase();
+        try {
+          const quote = await getStockQuote(uppercaseSymbol).catch(() => null);
+          const predictionsList = await storage.getPredictionsBySymbol(uppercaseSymbol, (req.user as any).id).catch(() => []);
+          const lastPrediction = predictionsList.length > 0 ? predictionsList[0] : null;
+          const news = await getStockNews(uppercaseSymbol).catch(() => []);
+          const analyzedNews = await analyzeSentiment(news).catch(() => []);
+          
+          if (quote) {
+            stockContext = {
+              symbol: uppercaseSymbol,
+              price: quote.price,
+              change: quote.change,
+              changePercent: quote.changePercent,
+              prediction: lastPrediction ? {
+                direction: lastPrediction.direction,
+                confidence: lastPrediction.confidence,
+                targetDate: lastPrediction.targetDate,
+              } : null,
+              recentNews: analyzedNews.slice(0, 5).map(article => ({
+                title: article.title,
+                sentiment: article.sentiment,
+              })),
+            };
+          }
+        } catch (err) {
+          console.error(`Error gathering stock context for RAG chatbot:`, err);
+        }
+      }
+
+      const response = await generateAIChatResponse(
+        message,
+        chatHistory || [],
+        stockContext
+      );
+
+      res.json({ response });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to generate chat response" });
     }
   });
 

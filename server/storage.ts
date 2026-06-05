@@ -1,4 +1,4 @@
-import { predictions, type Prediction, type InsertPrediction, users, type User, type InsertUser } from "@shared/schema";
+import { predictions, type Prediction, type InsertPrediction, users, type User, type InsertUser, authLogs } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, isNull, and } from "drizzle-orm";
 
@@ -11,9 +11,24 @@ export interface IStorage {
   getPredictionsBySymbol(symbol: string, userId?: string): Promise<Prediction[]>;
   updatePredictionOutcome(id: number, actualDirection: string, wasCorrect: number, actualPrice: number): Promise<void>;
   getUnvalidatedPredictions(): Promise<Prediction[]>;
+  createAuthLog(log: {
+    userId: string | null;
+    username: string;
+    eventType: string;
+    ipAddress: string | null;
+  }): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
+  async createAuthLog(log: {
+    userId: string | null;
+    username: string;
+    eventType: string;
+    ipAddress: string | null;
+  }): Promise<void> {
+    await db.insert(authLogs).values(log);
+  }
+
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;

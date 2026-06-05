@@ -26,10 +26,37 @@ export const predictions = pgTable("predictions", {
   wasCorrect: integer("was_correct"),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const authLogs = pgTable("auth_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").references(() => users.id),
+  username: text("username").notNull(),
+  eventType: text("event_type").notNull(),
+  ipAddress: text("ip_address"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+
+export const insertUserSchema = createInsertSchema(users)
+  .pick({
+    username: true,
+    password: true,
+  })
+  .extend({
+    username: z.string().min(3, "Username must be at least 3 characters"),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+={[\]}|:;"'<>,.?/~`]).*$/,
+        "Password must contain uppercase, lowercase, number, and special character"
+      ),
+  });
+
+export const loginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
 
 export const insertPredictionSchema = createInsertSchema(predictions);
 

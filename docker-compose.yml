@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: market_scholar_db
+    restart: always
+    environment:
+      POSTGRES_USER: market_user
+      POSTGRES_PASSWORD: market_secure_password_2026
+      POSTGRES_DB: market_scholar
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432" # Bind to localhost to prevent external access
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: market_scholar_web
+    restart: always
+    ports:
+      - "127.0.0.1:3000:3000" # Expose internally on localhost
+    environment:
+      - DATABASE_URL=postgres://market_user:market_secure_password_2026@db:5432/market_scholar
+      - OLLAMA_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=llama3.2:3b-instruct-q4_0
+      - NODE_ENV=production
+      - PORT=3000
+      - OLLAMA_TIMEOUT_MS=90000
+      - OLLAMA_MAX_RETRIES=2
+      - OLLAMA_RETRY_DELAY_MS=3000
+    depends_on:
+      - db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: market_scholar_caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
+

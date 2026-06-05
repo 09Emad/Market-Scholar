@@ -1,0 +1,3 @@
+stockvision-ai.com, www.stockvision-ai.com {
+    reverse_proxy web:3000
+}

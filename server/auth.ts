@@ -5,10 +5,21 @@ import { Express } from "express";
 import { storage } from "./storage";
 import crypto from "crypto";
 import { promisify } from "util";
-import createMemoryStore from "memorystore";
+import pgSession from "connect-pg-simple";
+import rateLimit from "express-rate-limit";
+import { insertUserSchema } from "@shared/schema";
 
 const scrypt = promisify(crypto.scrypt);
-const MemoryStore = createMemoryStore(session);
+const PgStore = pgSession(session);
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15, // limit each IP to 15 authentication attempts
+  message: { message: "Too many authentication requests, please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 
 export async function hashPassword(password: string) {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -28,19 +39,21 @@ export function setupAuth(app: Express) {
     secret: process.env.SESSION_SECRET || "market-scholar-session-secret-key-12345",
     resave: false,
     saveUninitialized: false,
-    store: new MemoryStore({
-      checkPeriod: 86400000, // prune expired entries every 24h
+    store: new PgStore({
+      conString: process.env.DATABASE_URL,
+      tableName: "user_sessions",
+      createTableIfMissing: true,
     }),
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       httpOnly: true,
-      secure: app.get("env") === "production",
+      secure: false,      // Must be false for plain HTTP (no HTTPS/SSL)
+      sameSite: "lax",    // Allow cookies on same-origin requests
     },
   };
 
-  if (app.get("env") === "production") {
-    app.set("trust proxy", 1);
-  }
+  // Do NOT set trust proxy for plain HTTP deployments - it can cause issues
+  // app.set("trust proxy", 1);  // Only needed behind HTTPS reverse proxy (nginx/caddy)
 
   app.use(session(sessionSettings));
   app.use(passport.initialize());
@@ -74,23 +87,24 @@ export function setupAuth(app: Express) {
   });
 
   // API Endpoints
-  app.post("/api/register", async (req, res, next) => {
+  app.post("/api/register", authLimiter, async (req, res, next) => {
     try {
-      const { username, password } = req.body;
-      if (!username || !password) {
-        return res.status(400).json({ message: "Username and password are required" });
+      const parsed = insertUserSchema.safeParse(req.body);
+      if (!parsed.success) {
+        const errorMsg = parsed.error.errors.map(e => e.message).join(". ");
+        return res.status(400).json({ message: errorMsg });
       }
 
-      if (username.length < 3) {
-        return res.status(400).json({ message: "Username must be at least 3 characters" });
-      }
-
-      if (password.length < 6) {
-        return res.status(400).json({ message: "Password must be at least 6 characters" });
-      }
+      const { username, password } = parsed.data;
 
       const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
+        await storage.createAuthLog({
+          userId: null,
+          username,
+          eventType: "REGISTER_FAILED_EXISTS",
+          ipAddress: req.ip || null,
+        });
         return res.status(400).json({ message: "Username already exists" });
       }
 
@@ -98,6 +112,13 @@ export function setupAuth(app: Express) {
       const user = await storage.createUser({
         username,
         password: hashedPassword,
+      });
+
+      await storage.createAuthLog({
+        userId: user.id,
+        username: user.username,
+        eventType: "REGISTER_SUCCESS",
+        ipAddress: req.ip || null,
       });
 
       req.login(user, (err) => {
@@ -109,22 +130,47 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
+  app.post("/api/login", authLimiter, (req, res, next) => {
+    const { username } = req.body;
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) return next(err);
       if (!user) {
-        return res.status(401).json({ message: info?.message || "Authentication failed" });
+        storage.createAuthLog({
+          userId: null,
+          username: typeof username === "string" ? username : "unknown",
+          eventType: "LOGIN_FAILED",
+          ipAddress: req.ip || null,
+        }).catch(console.error);
+        return res.status(401).json({ message: info?.message || "Invalid username or password" });
       }
       req.login(user, (loginErr) => {
         if (loginErr) return next(loginErr);
+        storage.createAuthLog({
+          userId: user.id,
+          username: user.username,
+          eventType: "LOGIN_SUCCESS",
+          ipAddress: req.ip || null,
+        }).catch(console.error);
         return res.status(200).json(user);
       });
     })(req, res, next);
   });
 
   app.post("/api/logout", (req, res, next) => {
+    const user = req.user as any;
+    const username = user?.username || "unknown";
+    const userId = user?.id || null;
+
     req.logout((err) => {
       if (err) return next(err);
+
+      storage.createAuthLog({
+        userId,
+        username,
+        eventType: "LOGOUT",
+        ipAddress: req.ip || null,
+      }).catch(console.error);
+
       res.status(200).json({ message: "Logged out successfully" });
     });
   });
@@ -136,3 +182,4 @@ export function setupAuth(app: Express) {
     res.json(req.user);
   });
 }
+

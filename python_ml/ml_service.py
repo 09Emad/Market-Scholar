@@ -84,12 +84,13 @@ def analyze_sentiment_tfidf(texts):
     return results
 
 
-def prepare_lstm_data(prices, sentiments, sequence_length=10, scaler=None):
+def prepare_lstm_data(prices, sentiments, sequence_length=14, scaler=None):
     df = pd.DataFrame(prices)
 
     df['returns'] = df['close'].pct_change()
     df['sma_5'] = df['close'].rolling(window=5).mean()
     df['sma_10'] = df['close'].rolling(window=10).mean()
+    df['sma_20'] = df['close'].rolling(window=20).mean()
     df['volatility'] = df['returns'].rolling(window=5).std()
     df['volume_change'] = df['volume'].pct_change()
     df['price_range'] = (df['high'] - df['low']) / df['close']
@@ -101,7 +102,7 @@ def prepare_lstm_data(prices, sentiments, sequence_length=10, scaler=None):
     loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
     rs = gain / (loss + 1e-9)
     df['rsi'] = 100 - (100 / (1 + rs))
-    df['rsi'] = df['rsi'].fillna(50) / 100.0  # Normalize to 0-1 range
+    df['rsi'] = df['rsi'].fillna(50) / 100.0
 
     # MACD
     ema_12 = df['close'].ewm(span=12, adjust=False).mean()
@@ -111,10 +112,46 @@ def prepare_lstm_data(prices, sentiments, sequence_length=10, scaler=None):
     df['macd_hist'] = df['macd'] - df['macd_signal']
     df['macd_hist'] = df['macd_hist'].fillna(0)
 
+    # Bollinger Bands
+    bb_mid = df['close'].rolling(window=20).mean()
+    bb_std = df['close'].rolling(window=20).std()
+    df['bb_upper'] = bb_mid + 2 * bb_std
+    df['bb_lower'] = bb_mid - 2 * bb_std
+    df['bb_width'] = (df['bb_upper'] - df['bb_lower']) / (bb_mid + 1e-9)
+    df['bb_position'] = (df['close'] - df['bb_lower']) / (df['bb_upper'] - df['bb_lower'] + 1e-9)
+
+    # Stochastic Oscillator (%K)
+    low_14 = df['low'].rolling(window=14).min()
+    high_14 = df['high'].rolling(window=14).max()
+    df['stoch_k'] = (df['close'] - low_14) / (high_14 - low_14 + 1e-9)
+    df['stoch_d'] = df['stoch_k'].rolling(window=3).mean()
+
+    # ATR (Average True Range)
+    high_low = df['high'] - df['low']
+    high_close = (df['high'] - df['close'].shift()).abs()
+    low_close = (df['low'] - df['close'].shift()).abs()
+    true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+    df['atr'] = true_range.rolling(window=14).mean() / (df['close'] + 1e-9)
+
+    # OBV (On Balance Volume) - normalized
+    obv = [0]
+    for i in range(1, len(df)):
+        if df['close'].iloc[i] > df['close'].iloc[i-1]:
+            obv.append(obv[-1] + df['volume'].iloc[i])
+        elif df['close'].iloc[i] < df['close'].iloc[i-1]:
+            obv.append(obv[-1] - df['volume'].iloc[i])
+        else:
+            obv.append(obv[-1])
+    df['obv'] = obv
+    df['obv'] = df['obv'].pct_change().fillna(0)
+
+    # EMA ratio (short/long)
+    ema_9 = df['close'].ewm(span=9, adjust=False).mean()
+    df['ema_ratio'] = ema_9 / (df['sma_20'] + 1e-9)
+
     avg_sentiment = sentiments if isinstance(sentiments, (int, float)) else 0.5
     df['sentiment'] = avg_sentiment
-
-    df['sma_ratio'] = df['sma_5'] / df['sma_10']
+    df['sma_ratio'] = df['sma_5'] / (df['sma_10'] + 1e-9)
 
     df = df.dropna().reset_index(drop=True)
 
@@ -124,11 +161,18 @@ def prepare_lstm_data(prices, sentiments, sequence_length=10, scaler=None):
     df['target'] = (df['close'].shift(-1) > df['close']).astype(int)
     df = df.dropna().reset_index(drop=True)
 
-    feature_columns = ['returns', 'sma_ratio', 'volatility', 'volume_change',
-                        'price_range', 'momentum', 'sentiment', 'rsi', 'macd_hist']
-    feature_names = ['Price Returns', 'Moving Average Ratio', 'Volatility',
-                     'Volume Change', 'Price Range', 'Momentum', 'News Sentiment',
-                     'RSI Indicator', 'MACD Histogram']
+    feature_columns = [
+        'returns', 'sma_ratio', 'volatility', 'volume_change',
+        'price_range', 'momentum', 'sentiment', 'rsi', 'macd_hist',
+        'bb_width', 'bb_position', 'stoch_k', 'stoch_d',
+        'atr', 'obv', 'ema_ratio'
+    ]
+    feature_names = [
+        'Price Returns', 'Moving Average Ratio', 'Volatility', 'Volume Change',
+        'Price Range', 'Momentum', 'News Sentiment', 'RSI Indicator', 'MACD Histogram',
+        'Bollinger Band Width', 'Bollinger Band Position', 'Stochastic %K', 'Stochastic %D',
+        'ATR (Volatility)', 'OBV (Volume Flow)', 'EMA Ratio'
+    ]
 
     if scaler is None:
         scaler = MinMaxScaler()
@@ -149,22 +193,54 @@ def prepare_lstm_data(prices, sentiments, sequence_length=10, scaler=None):
 
 def build_lstm_model(input_shape):
     from tensorflow.keras.models import Sequential
-    from tensorflow.keras.layers import LSTM, Dense, Dropout
+    from tensorflow.keras.layers import LSTM, Dense, Dropout, BatchNormalization
+    from tensorflow.keras.optimizers import Adam
 
     model = Sequential([
-        LSTM(64, input_shape=input_shape, return_sequences=True),
+        LSTM(128, input_shape=input_shape, return_sequences=True),
+        Dropout(0.3),
+        BatchNormalization(),
+        LSTM(64, return_sequences=True),
         Dropout(0.2),
+        BatchNormalization(),
         LSTM(32, return_sequences=False),
         Dropout(0.2),
+        Dense(32, activation='relu'),
+        BatchNormalization(),
         Dense(16, activation='relu'),
         Dense(1, activation='sigmoid')
     ])
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    model.compile(
+        optimizer=Adam(learning_rate=0.001),
+        loss='binary_crossentropy',
+        metrics=['accuracy']
+    )
     return model
 
 
+def calibrate_confidence(raw_prob, temperature=0.6):
+    """Temperature scaling to push confidence away from 50%.
+    Lower temperature = more extreme values (higher confidence spread).
+    """
+    if raw_prob > 0.5:
+        direction = 'up'
+        raw_conf = raw_prob
+    else:
+        direction = 'down'
+        raw_conf = 1.0 - raw_prob
+
+    # Shift to [0, 1] range relative to 0.5, then scale
+    shifted = (raw_conf - 0.5) / temperature
+    calibrated = 1.0 / (1.0 + np.exp(-shifted * 6))  # sigmoid rescaling
+    calibrated = 0.5 + (calibrated - 0.5)  # keep centered at 0.5
+
+    # Ensure min/max bounds
+    confidence = min(0.92, max(0.38, calibrated))
+    return direction, confidence
+
+
 def train_and_predict(prices, sentiment_score, symbol, news_articles=None):
-    sequence_length = 7
+    sequence_length = 14
     news_articles = news_articles or []
 
     X, y, feature_cols, feature_names, scaler = prepare_lstm_data(
@@ -183,11 +259,13 @@ def train_and_predict(prices, sentiment_score, symbol, news_articles=None):
 
     try:
         from tensorflow.keras.callbacks import EarlyStopping
-        early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+        early_stop = EarlyStopping(monitor='val_loss', patience=8, restore_best_weights=True)
+        from tensorflow.keras.callbacks import ReduceLROnPlateau
+        reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=4, min_lr=1e-5)
 
         model = build_lstm_model((X.shape[1], X.shape[2]))
-        model.fit(X_train, y_train, epochs=30, batch_size=8, verbose=0,
-                  validation_split=0.1, callbacks=[early_stop])
+        model.fit(X_train, y_train, epochs=50, batch_size=16, verbose=0,
+                  validation_split=0.15, callbacks=[early_stop, reduce_lr])
 
         # Save model and scaler to cache
         model_path = os.path.join(CACHE_DIR, f"{symbol}_model.keras")
@@ -226,15 +304,22 @@ def train_and_predict(prices, sentiment_score, symbol, news_articles=None):
         }
         with open(metrics_path, "w", encoding="utf-8") as f:
             json.dump(metrics_data, f, ensure_ascii=False, indent=2)
+        
+        # Save to in-memory cache
+        if os.path.exists(model_path):
+            mtime = os.path.getmtime(model_path)
+            model_cache[symbol] = {
+                'model': model,
+                'scaler': scaler,
+                'metrics': metrics_data,
+                'mtime': mtime
+            }
     except Exception as e:
-        print(f"Error saving metrics to cache for {symbol}: {e}")
+        print(f"Error saving metrics/caching model for {symbol}: {e}")
 
-    last_sequence = X[-1:] 
+    last_sequence = X[-1:]
     next_day_pred = model.predict(last_sequence, verbose=0)[0][0]
-
-    direction = 'up' if next_day_pred > 0.5 else 'down'
-    raw_confidence = float(next_day_pred) if direction == 'up' else float(1 - next_day_pred)
-    confidence = min(0.92, max(0.35, raw_confidence))
+    direction, confidence = calibrate_confidence(float(next_day_pred))
 
     importance = compute_feature_importance(model, X_test, y_test, feature_names)
 
@@ -336,8 +421,7 @@ def train_and_predict(prices, sentiment_score, symbol, news_articles=None):
 
 
 def load_and_predict(prices, sentiment_score, symbol, news_articles=None):
-    from tensorflow.keras.models import load_model
-    sequence_length = 7
+    sequence_length = 14
     news_articles = news_articles or []
 
     # Paths
@@ -345,13 +429,41 @@ def load_and_predict(prices, sentiment_score, symbol, news_articles=None):
     scaler_path = os.path.join(CACHE_DIR, f"{symbol}_scaler.pkl")
     metrics_path = os.path.join(CACHE_DIR, f"{symbol}_metrics.json")
 
-    # Load Model, Scaler, Metrics
-    model = load_model(model_path)
-    with open(scaler_path, "rb") as f:
-        scaler = pickle.load(f)
-    
-    with open(metrics_path, "r", encoding="utf-8") as f:
-        metrics = json.load(f)
+    # Try to load from in-memory cache first
+    cached = model_cache.get(symbol)
+    if cached and os.path.exists(model_path):
+        try:
+            mtime = os.path.getmtime(model_path)
+            if cached.get('mtime') == mtime:
+                model = cached['model']
+                scaler = cached['scaler']
+                metrics = cached['metrics']
+                print(f"Using in-memory cached LSTM model for {symbol}")
+            else:
+                cached = None
+        except Exception:
+            cached = None
+
+    if not cached:
+        from tensorflow.keras.models import load_model
+        print(f"Loading LSTM model from disk for {symbol}...")
+        model = load_model(model_path)
+        with open(scaler_path, "rb") as f:
+            scaler = pickle.load(f)
+        
+        with open(metrics_path, "r", encoding="utf-8") as f:
+            metrics = json.load(f)
+            
+        try:
+            mtime = os.path.getmtime(model_path)
+            model_cache[symbol] = {
+                'model': model,
+                'scaler': scaler,
+                'metrics': metrics,
+                'mtime': mtime
+            }
+        except Exception as e:
+            print(f"Error caching loaded model in-memory for {symbol}: {e}")
 
     X, y, feature_cols, feature_names, scaler = prepare_lstm_data(
         prices, sentiment_score, sequence_length, scaler=scaler
@@ -364,12 +476,9 @@ def load_and_predict(prices, sentiment_score, symbol, news_articles=None):
     X_test = X[split_idx:]
     y_test = y[split_idx:]
 
-    last_sequence = X[-1:] 
+    last_sequence = X[-1:]
     next_day_pred = model.predict(last_sequence, verbose=0)[0][0]
-
-    direction = 'up' if next_day_pred > 0.5 else 'down'
-    raw_confidence = float(next_day_pred) if direction == 'up' else float(1 - next_day_pred)
-    confidence = min(0.92, max(0.35, raw_confidence))
+    direction, confidence = calibrate_confidence(float(next_day_pred))
 
     # Compute feature importance dynamically based on current test data
     importance = compute_feature_importance(model, X_test, y_test, feature_names)
@@ -820,26 +929,14 @@ def predict_endpoint():
     if not prices:
         return jsonify({'error': 'No price data provided'}), 400
 
-    # Check if a pre-calculated prediction result exists (always use if available to save CPU/RAM)
-    result_path = os.path.join(CACHE_DIR, f"{symbol}_result.json")
-    if os.path.exists(result_path):
-        try:
-            print(f"Returning cached prediction result for {symbol}...")
-            with open(result_path, "r", encoding="utf-8") as f:
-                res = json.load(f)
-            res['symbol'] = symbol
-            return jsonify(res)
-        except Exception as e:
-            print(f"Error reading cached result JSON for {symbol}: {e}")
-
-    # Check if a fresh cached model and scaler exist (under 12 hours old)
+    # Check if a fresh cached model and scaler exist (under 6 hours old)
     model_path = os.path.join(CACHE_DIR, f"{symbol}_model.keras")
     scaler_path = os.path.join(CACHE_DIR, f"{symbol}_scaler.pkl")
     metrics_path = os.path.join(CACHE_DIR, f"{symbol}_metrics.json")
 
     if os.path.exists(model_path) and os.path.exists(scaler_path) and os.path.exists(metrics_path):
         mtime = os.path.getmtime(model_path)
-        if time.time() - mtime < 43200: # 12 hours in seconds
+        if time.time() - mtime < 21600: # 6 hours - always use fresh market data for inference
             try:
                 avg_sentiment = 0.5
                 if news_articles:

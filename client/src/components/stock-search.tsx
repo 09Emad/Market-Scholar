@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Search, TrendingUp, X } from "lucide-react";
+import { Search, TrendingUp, X, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,8 @@ export function StockSearch({ onSelectStock, currentSymbol }: StockSearchProps) 
   const [query, setQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
 
+  const trimmed = query.trim().toUpperCase();
+
   const filtered = query.length > 0
     ? POPULAR_STOCKS.filter(
         (s) =>
@@ -21,6 +23,12 @@ export function StockSearch({ onSelectStock, currentSymbol }: StockSearchProps) 
           s.name.toLowerCase().includes(query.toLowerCase())
       )
     : POPULAR_STOCKS;
+
+  // Show a "direct search" option when the user typed something that's not in the list
+  const showDirectSearch =
+    trimmed.length > 0 &&
+    trimmed.length <= 10 &&
+    !POPULAR_STOCKS.some((s) => s.symbol === trimmed);
 
   const handleSelect = useCallback(
     (symbol: string) => {
@@ -31,6 +39,12 @@ export function StockSearch({ onSelectStock, currentSymbol }: StockSearchProps) 
     [onSelectStock]
   );
 
+  const handleDirectSearch = () => {
+    if (trimmed.length > 0) {
+      handleSelect(trimmed);
+    }
+  };
+
   return (
     <div className="relative">
       <div className="relative">
@@ -38,12 +52,18 @@ export function StockSearch({ onSelectStock, currentSymbol }: StockSearchProps) 
         <Input
           data-testid="input-stock-search"
           type="search"
-          placeholder="Search stocks (e.g., AAPL, Tesla)..."
+          placeholder="Search stocks (e.g., AAPL, UBER, COIN)..."
           className="pl-10 pr-10 font-mono"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && trimmed.length > 0) {
+              e.preventDefault();
+              handleSelect(trimmed);
+            }
+          }}
         />
         {query && (
           <Button
@@ -60,36 +80,61 @@ export function StockSearch({ onSelectStock, currentSymbol }: StockSearchProps) 
 
       {isFocused && (
         <div className="absolute z-50 top-full mt-1 w-full bg-popover border border-popover-border rounded-md shadow-lg max-h-72 overflow-y-auto">
-          {filtered.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground text-sm">
-              No stocks found for "{query}"
-            </div>
-          ) : (
-            <div className="p-1">
-              {!query && (
-                <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <TrendingUp className="h-3 w-3" />
-                  Popular Stocks
-                </div>
-              )}
-              {filtered.map((stock) => (
-                <button
-                  key={stock.symbol}
-                  data-testid={`button-stock-${stock.symbol}`}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover-elevate cursor-pointer text-left"
-                  onClick={() => handleSelect(stock.symbol)}
+          <div className="p-1">
+            {/* Direct symbol search — always on top when typing */}
+            {showDirectSearch && (
+              <button
+                data-testid={`button-stock-direct-${trimmed}`}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary/10 cursor-pointer text-left border border-dashed border-primary/30 mb-1 group"
+                onMouseDown={(e) => { e.preventDefault(); handleDirectSearch(); }}
+              >
+                <Badge
+                  variant="outline"
+                  className="font-mono text-xs min-w-[52px] justify-center text-primary border-primary/40"
                 >
-                  <Badge
-                    variant={currentSymbol === stock.symbol ? "default" : "secondary"}
-                    className="font-mono text-xs min-w-[52px] justify-center"
+                  {trimmed}
+                </Badge>
+                <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors flex items-center gap-1">
+                  Search for <span className="font-semibold text-foreground">{trimmed}</span> directly
+                  <ArrowRight className="h-3 w-3 ml-1 opacity-60" />
+                </span>
+              </button>
+            )}
+
+            {/* Popular stocks list */}
+            {filtered.length > 0 ? (
+              <>
+                {!query && (
+                  <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <TrendingUp className="h-3 w-3" />
+                    Popular Stocks
+                  </div>
+                )}
+                {filtered.map((stock) => (
+                  <button
+                    key={stock.symbol}
+                    data-testid={`button-stock-${stock.symbol}`}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover-elevate cursor-pointer text-left"
+                    onClick={() => handleSelect(stock.symbol)}
                   >
-                    {stock.symbol}
-                  </Badge>
-                  <span className="text-sm truncate">{stock.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
+                    <Badge
+                      variant={currentSymbol === stock.symbol ? "default" : "secondary"}
+                      className="font-mono text-xs min-w-[52px] justify-center"
+                    >
+                      {stock.symbol}
+                    </Badge>
+                    <span className="text-sm truncate">{stock.name}</span>
+                  </button>
+                ))}
+              </>
+            ) : (
+              !showDirectSearch && (
+                <div className="p-4 text-center text-muted-foreground text-sm">
+                  No stocks found for "{query}"
+                </div>
+              )
+            )}
+          </div>
         </div>
       )}
     </div>

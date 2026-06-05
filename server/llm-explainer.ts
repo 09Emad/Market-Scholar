@@ -257,3 +257,111 @@ export async function generateLLMExplanation(payload: ExplainPayload): Promise<L
 
   throw lastError || new Error("Ollama explanation failed");
 }
+
+export async function generateAIChatResponse(
+  userMessage: string,
+  chatHistory: Array<{ role: "user" | "assistant" | "system"; content: string }>,
+  stockContext?: {
+    symbol: string;
+    price: number;
+    change: number;
+    changePercent: number;
+    prediction?: {
+      direction: string;
+      confidence: number;
+      targetDate: string;
+    } | null;
+    recentNews?: Array<{ title: string; sentiment?: string }> | null;
+  }
+): Promise<string> {
+  const academicGlossary = `
+Academic Reference Glossary (for explaining financial concepts scientifically):
+1. LSTM (Long Short-Term Memory): A special type of Recurrent Neural Network (RNN) designed to process sequences and time-series data. It solves the vanishing gradient problem using three gates:
+   - Forget Gate: Decides what information to discard from the cell state.
+   - Input Gate: Decides which new information to store in the cell state.
+   - Output Gate: Decides what next hidden state should be outputted.
+   - Cell State: The main memory channel that flows down the sequence.
+2. RSI (Relative Strength Index): A momentum oscillator that measures the speed and change of price movements between 0 and 100. Formula: RSI = 100 - (100 / (1 + RS)), where RS = Average Gain / Average Loss. Generally, RSI > 70 is overbought, and RSI < 30 is oversold.
+3. MACD (Moving Average Convergence Divergence): A trend-following momentum indicator showing the relationship between two Exponential Moving Averages (EMAs): the 26-period EMA and the 12-period EMA. The Signal Line is the 9-period EMA of the MACD Line. The MACD Histogram shows the distance between the MACD Line and the Signal Line.
+4. Market Sentiment: Evaluates the positive/negative tone of recent news headlines using NLTK and TextBlob to assign a score from 0 (extremely bearish) to 1 (extremely bullish), where 0.5 is neutral.
+`;
+
+  let systemMessage = `You are StockVision AI, a professional financial assistant. 
+
+Core Directives:
+1. ALWAYS match the language of the user's message.
+   - If the user types in English, you MUST reply entirely in English.
+   - If the user types in Arabic, you MUST reply entirely in Arabic.
+2. Keep your answers brief, mathematically oriented, and to the point.
+
+Use the following academic glossary for explanations:
+${academicGlossary}
+
+CRITICAL TRANSLATION RULES FOR ARABIC:
+- NEVER translate "stock" or "share" to "عملة" (currency). Use "سهم" or "أسهم".
+- "momentum" -> "الزخم" (NEVER translate it as "التحرك السريع للمحتوى" or "حركة المحتوى").
+- "haircut" (in finance) -> "خصم الضمان" or "نسبة الخصم" (NEVER translate it as "الحلاقة").
+- "hedging" -> "التحوط" (NEVER translate it as "الحلاقة" or any literal term).
+- "prediction summary" -> "ملخص التنبؤ" (NEVER use "التنبؤ البصفي").
+- Use these exact academic Arabic translations:
+  * LSTM (Long Short-Term Memory): شبكة الذاكرة طويلة قصيرة المدى.
+    - Forget Gate: بوابة النسيان.
+    - Input Gate: بوابة الإدخال.
+    - Output Gate: بوابة الإخراج.
+    - Cell State: حالة الخلية.
+  * RSI (Relative Strength Index): مؤشر القوة النسبية. (RSI > 70: تشبع شرائي, RSI < 30: تشبع بيعي).
+  * MACD (Moving Average Convergence Divergence): مؤشر تقارب وتباعد المتوسطات المتحركة.
+    - Signal Line: خط الإشارة.
+    - MACD Histogram: مخطط الماكد.
+  * Market Sentiment: تحليل نبرة مشاعر الأخبار (Bullish: صاعد/متفائل, Bearish: هابط/متشائم, Neutral: محايد).
+- Always write Arabic in a professional, fluent, and coherent academic style (لغة عربية فصيحة، رصينة، وأكاديمية متماسكة). Avoid literal, clunky, machine-like translations.
+`;
+
+  if (stockContext) {
+    systemMessage += `\n\nContext for current stock query:
+Symbol: ${stockContext.symbol}
+Current Price: $${stockContext.price} (Change: ${stockContext.change >= 0 ? "+" : ""}${stockContext.change.toFixed(2)}, Percent: ${stockContext.changePercent >= 0 ? "+" : ""}${stockContext.changePercent.toFixed(2)}%)
+`;
+    if (stockContext.prediction) {
+      systemMessage += `LSTM Neural Network Prediction: ${stockContext.prediction.direction.toUpperCase()} with ${(stockContext.prediction.confidence * 100).toFixed(1)}% confidence targeting ${stockContext.prediction.targetDate}.\n`;
+    }
+    if (stockContext.recentNews && stockContext.recentNews.length > 0) {
+      systemMessage += `Recent News Headlines & Sentiments:\n` + stockContext.recentNews.map(n => `- ${n.title} (Sentiment: ${n.sentiment || "Neutral"})`).join("\n") + "\n";
+    }
+  }
+
+  const messages = [
+    { role: "system", content: systemMessage },
+    ...chatHistory,
+    { role: "user", content: userMessage }
+  ];
+
+  const requestBody = {
+    model: OLLAMA_MODEL,
+    stream: false,
+    keep_alive: "30m",
+    messages,
+    options: {
+      temperature: 0.6,
+      top_p: 0.95,
+      num_ctx: 4096,
+      num_predict: 400,
+    },
+  };
+
+  try {
+    const response = await httpRequest(`${OLLAMA_URL}/api/chat`, JSON.stringify(requestBody));
+    if (response.status < 200 || response.status >= 300) {
+      throw new Error(`Ollama returned status ${response.status}`);
+    }
+    const content = response.data?.message?.content;
+    if (!content) {
+      throw new Error("Empty AI chat response");
+    }
+    return content.trim();
+  } catch (error: any) {
+    console.error("AI Chat error:", error);
+    return "Sorry, I am having trouble connecting to the AI brain right now. Please try again in a moment.";
+  }
+}
+

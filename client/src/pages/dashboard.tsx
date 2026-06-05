@@ -15,6 +15,7 @@ import { Disclaimer, RiskLimitations } from "@/components/disclaimer";
 import { TickerBar } from "@/components/ticker-bar";
 import { Watchlist } from "@/components/watchlist";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AIChatAssistant } from "@/components/ai-chat-assistant";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,6 +42,7 @@ export default function Dashboard() {
   const { isDark, toggle: toggleTheme } = useTheme();
   const [selectedSymbol, setSelectedSymbol] = useState<string>("");
   const [timeRange, setTimeRange] = useState("1m");
+  const [activeTab, setActiveTab] = useState("overview");
   const { toast } = useToast();
 
   const [marketActive, setMarketActive] = useState(() => {
@@ -265,76 +267,85 @@ useEffect(() => {
           </div>
         )}
 
-        <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="w-full max-w-full justify-start overflow-x-auto overflow-y-hidden flex-nowrap scrollbar-none md:w-auto md:inline-flex md:justify-center">
             <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
             <TabsTrigger value="analysis" data-testid="tab-analysis">Analysis & Prediction</TabsTrigger>
             <TabsTrigger value="history" data-testid="tab-history">History & Metrics</TabsTrigger>
             <TabsTrigger value="about" data-testid="tab-about">About & Risks</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-              <div className="lg:col-span-3 space-y-4">
-                <StockPriceCard
-                  quote={stockQuery.data ?? null}
-                  isLoading={stockQuery.isLoading && !!selectedSymbol}
-                />
-                <PriceChart
-                  data={chartQuery.data ?? null}
-                  isLoading={chartQuery.isLoading && !!selectedSymbol}
-                  symbol={selectedSymbol}
-                  timeRange={timeRange}
-                  onTimeRangeChange={setTimeRange}
-                />
+          {activeTab === "overview" && (
+            <TabsContent value="overview" className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                <div className="lg:col-span-3 space-y-4">
+                  <StockPriceCard
+                    quote={stockQuery.data ?? null}
+                    isLoading={stockQuery.isLoading && !!selectedSymbol}
+                  />
+                  <PriceChart
+                    data={chartQuery.data ?? null}
+                    isLoading={chartQuery.isLoading && !!selectedSymbol}
+                    symbol={selectedSymbol}
+                    timeRange={timeRange}
+                    onTimeRangeChange={setTimeRange}
+                  />
+                </div>
+                <div className="space-y-4">
+                  <Watchlist
+                    onSelectStock={handleSelectStock}
+                    currentSymbol={selectedSymbol}
+                  />
+                  <NewsFeed
+                    articles={newsQuery.data ?? null}
+                    isLoading={newsQuery.isLoading && !!selectedSymbol}
+                    symbol={selectedSymbol}
+                  />
+                </div>
               </div>
-              <div className="space-y-4">
-                <Watchlist
-                  onSelectStock={handleSelectStock}
-                  currentSymbol={selectedSymbol}
-                />
-                <NewsFeed
-                  articles={newsQuery.data ?? null}
-                  isLoading={newsQuery.isLoading && !!selectedSymbol}
-                  symbol={selectedSymbol}
-                />
-              </div>
-            </div>
-            <Disclaimer />
-          </TabsContent>
+              <Disclaimer />
+            </TabsContent>
+          )}
 
-          <TabsContent value="analysis" className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <PredictionCard
-                prediction={predictionMutation.data ?? null}
-                isLoading={predictionMutation.isPending}
-                symbol={selectedSymbol}
+          {activeTab === "analysis" && (
+            <TabsContent value="analysis" className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <PredictionCard
+                  prediction={predictionMutation.data ?? null}
+                  isLoading={predictionMutation.isPending}
+                  symbol={selectedSymbol}
+                />
+                <div className="space-y-4">
+                  <ModelMetrics
+                    prediction={predictionMutation.data ?? null}
+                    isLoading={predictionMutation.isPending}
+                  />
+                  <FeatureImportance
+                    prediction={predictionMutation.data ?? null}
+                    isLoading={predictionMutation.isPending}
+                  />
+                </div>
+              </div>
+              <Disclaimer />
+            </TabsContent>
+          )}
+
+          {activeTab === "history" && (
+            <TabsContent value="history" className="space-y-4">
+              <PredictionHistory
+                predictions={historyQuery.data ?? null}
+                isLoading={historyQuery.isLoading}
+                isAuthenticated={!!user}
               />
-              <div className="space-y-4">
-                <ModelMetrics
-                  prediction={predictionMutation.data ?? null}
-                  isLoading={predictionMutation.isPending}
-                />
-                <FeatureImportance
-                  prediction={predictionMutation.data ?? null}
-                  isLoading={predictionMutation.isPending}
-                />
-              </div>
-            </div>
-            <Disclaimer />
-          </TabsContent>
+            </TabsContent>
+          )}
 
-          <TabsContent value="history" className="space-y-4">
-            <PredictionHistory
-              predictions={historyQuery.data ?? null}
-              isLoading={historyQuery.isLoading}
-            />
-          </TabsContent>
-
-          <TabsContent value="about" className="space-y-4">
-            <RiskLimitations />
-            <Disclaimer />
-          </TabsContent>
+          {activeTab === "about" && (
+            <TabsContent value="about" className="space-y-4">
+              <RiskLimitations />
+              <Disclaimer />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
 
@@ -350,6 +361,8 @@ useEffect(() => {
           </div>
         </div>
       </footer>
+
+      <AIChatAssistant activeSymbol={selectedSymbol} />
     </div>
   );
 }

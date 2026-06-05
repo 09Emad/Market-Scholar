@@ -496,7 +496,11 @@ export function PriceChart({
     if (!el) return;
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        setDimensions({ width: entry.contentRect.width, height: entry.contentRect.height });
+        const { width, height } = entry.contentRect;
+        // Only update if dimensions are positive (ignores collapsed hidden tabs)
+        if (width > 0 && height > 0) {
+          setDimensions({ width, height });
+        }
       }
     });
     observer.observe(el);
