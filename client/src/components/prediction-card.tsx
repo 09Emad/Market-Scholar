@@ -4,6 +4,8 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Brain, TrendingUp, TrendingDown, AlertTriangle, BarChart3, Newspaper, Activity, Zap, FileText } from "lucide-react";
 import type { PredictionResult } from "@shared/schema";
+import { useTheme } from "@/components/theme-toggle";
+import { translations } from "@/lib/translations";
 
 interface PredictionCardProps {
   prediction: PredictionResult | null;
@@ -21,13 +23,17 @@ const sectionIcons: Record<string, typeof Brain> = {
 };
 
 export function PredictionCard({ prediction, isLoading, symbol }: PredictionCardProps) {
+  const { language } = useTheme();
+  const t = (key: keyof typeof translations.en) => {
+    return translations[language]?.[key] || translations.en[key] || key;
+  };
   if (isLoading) {
     return (
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <Brain className="h-4 w-4" />
-            AI Prediction
+            {t("aiPrediction")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
@@ -51,14 +57,14 @@ export function PredictionCard({ prediction, isLoading, symbol }: PredictionCard
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <Brain className="h-4 w-4" />
-            AI Prediction
+            {t("aiPrediction")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Brain className="h-10 w-10 text-muted-foreground mb-3" />
             <p className="text-sm text-muted-foreground">
-              Select a stock to generate predictions
+              {t("selectStockPredictions")}
             </p>
           </div>
         </CardContent>
@@ -75,7 +81,7 @@ export function PredictionCard({ prediction, isLoading, symbol }: PredictionCard
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <Brain className="h-4 w-4" />
-            Next-Day Prediction for {symbol}
+            {t("nextDayPredictionFor")} {symbol}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
@@ -103,16 +109,16 @@ export function PredictionCard({ prediction, isLoading, symbol }: PredictionCard
               </div>
               <div>
                 <p className="text-lg font-semibold" data-testid="text-prediction-direction">
-                  Price Expected to Go {isUp ? "Up" : "Down"}
+                  {t("priceExpectedGo")} {isUp ? t("up") : t("down")}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Target Date: {prediction.targetDate}
+                  {t("targetDate")}: {prediction.targetDate}
                 </p>
               </div>
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Confidence</span>
+                <span className="text-muted-foreground">{t("confidence")}</span>
                 <span className="font-medium font-mono" data-testid="text-confidence-score">
                   {confidencePercent}%
                 </span>
@@ -128,29 +134,29 @@ export function PredictionCard({ prediction, isLoading, symbol }: PredictionCard
           </div>
 
           <div className="space-y-2.5">
-            <h4 className="text-sm font-medium text-muted-foreground">Contributing Factors</h4>
+            <h4 className="text-sm font-medium text-muted-foreground">{t("contributingFactors")}</h4>
             <FactorRow
-              label="Technical Score"
+              label={t("technicalScore")}
               value={`${(prediction.factors.technicalScore * 100).toFixed(0)}%`}
               testId="text-technical-score"
             />
             <FactorRow
-              label="Sentiment Score"
+              label={t("sentimentScore")}
               value={`${(prediction.factors.sentimentScore * 100).toFixed(0)}%`}
               testId="text-sentiment-score"
             />
             <FactorRow
-              label="Volume Signal"
+              label={t("volumeSignal")}
               value={prediction.factors.volumeSignal}
               testId="text-volume-signal"
             />
             <FactorRow
-              label="Price Action"
+              label={t("priceAction")}
               value={prediction.factors.priceAction}
               testId="text-price-action"
             />
             <FactorRow
-              label="News Impact"
+              label={t("newsImpact")}
               value={prediction.factors.newsImpact}
               testId="text-news-impact"
             />
@@ -160,7 +166,7 @@ export function PredictionCard({ prediction, isLoading, symbol }: PredictionCard
             <div className="flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-amber-700 dark:text-amber-300">
-                This prediction is for educational purposes only. It does not constitute financial advice or a recommendation to buy/sell securities.
+                {t("predictionDisclaimer")}
               </p>
             </div>
           </div>
@@ -172,9 +178,9 @@ export function PredictionCard({ prediction, isLoading, symbol }: PredictionCard
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              AI Analysis Report
+              {t("aiAnalysisReport")}
               <Badge variant="secondary" className="text-xs ml-auto">
-                {isUp ? "Bullish" : "Bearish"}
+                {isUp ? t("bullish") : t("bearish")}
               </Badge>
             </CardTitle>
           </CardHeader>
@@ -208,7 +214,7 @@ export function PredictionCard({ prediction, isLoading, symbol }: PredictionCard
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium flex items-center gap-2">
               <Brain className="h-4 w-4" />
-              LLM Decision Explanation
+              {t("llmExplanation")}
               <Badge variant="secondary" className="text-xs ml-auto capitalize">
                 {prediction.explanation.newsAlignment}
               </Badge>
@@ -216,14 +222,14 @@ export function PredictionCard({ prediction, isLoading, symbol }: PredictionCard
           </CardHeader>
           <CardContent className="p-4 pt-0 space-y-4">
             <div className="rounded-md border p-3">
-              <h4 className="text-sm font-semibold mb-2">Combined View</h4>
+              <h4 className="text-sm font-semibold mb-2">{t("combinedView")}</h4>
               <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-llm-combined-view">
                 {prediction.explanation.combinedView}
               </p>
             </div>
 
             <div className="rounded-md border p-3">
-              <h4 className="text-sm font-semibold mb-2">Technical Reasoning</h4>
+              <h4 className="text-sm font-semibold mb-2">{t("technicalReasoning")}</h4>
               <ul className="list-disc pl-4 space-y-1 text-sm text-muted-foreground" data-testid="list-llm-technical-reasoning">
                 {prediction.explanation.technicalReasoning.map((item, idx) => (
                   <li key={`tech-${idx}`}>{item}</li>
@@ -233,7 +239,7 @@ export function PredictionCard({ prediction, isLoading, symbol }: PredictionCard
 
             {prediction.explanation.newsReasoning.length > 0 && (
               <div className="rounded-md border p-3">
-                <h4 className="text-sm font-semibold mb-2">News Reasoning</h4>
+                <h4 className="text-sm font-semibold mb-2">{t("newsReasoning")}</h4>
                 <ul className="list-disc pl-4 space-y-1 text-sm text-muted-foreground" data-testid="list-llm-news-reasoning">
                   {prediction.explanation.newsReasoning.map((item, idx) => (
                     <li key={`news-${idx}`}>{item}</li>
@@ -244,7 +250,7 @@ export function PredictionCard({ prediction, isLoading, symbol }: PredictionCard
 
             {prediction.explanation.riskFlags.length > 0 && (
               <div className="rounded-md border p-3">
-                <h4 className="text-sm font-semibold mb-2">Risk Flags</h4>
+                <h4 className="text-sm font-semibold mb-2">{t("riskFlags")}</h4>
                 <ul className="list-disc pl-4 space-y-1 text-sm text-muted-foreground" data-testid="list-llm-risk-flags">
                   {prediction.explanation.riskFlags.map((item, idx) => (
                     <li key={`risk-${idx}`}>{item}</li>
@@ -255,7 +261,7 @@ export function PredictionCard({ prediction, isLoading, symbol }: PredictionCard
 
             {prediction.explanation.invalidations.length > 0 && (
               <div className="rounded-md border p-3">
-                <h4 className="text-sm font-semibold mb-2">Invalidations</h4>
+                <h4 className="text-sm font-semibold mb-2">{t("invalidations")}</h4>
                 <ul className="list-disc pl-4 space-y-1 text-sm text-muted-foreground" data-testid="list-llm-invalidations">
                   {prediction.explanation.invalidations.map((item, idx) => (
                     <li key={`inv-${idx}`}>{item}</li>

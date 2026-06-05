@@ -7,6 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Star, X, Plus, TrendingUp, TrendingDown } from "lucide-react";
 import { formatPercent, formatCurrency } from "@/lib/constants";
 import type { StockQuote } from "@shared/schema";
+import { useTheme } from "@/components/theme-toggle";
+import { translations } from "@/lib/translations";
 
 const STORAGE_KEY = "stockvision-watchlist";
 
@@ -43,6 +45,10 @@ export function Watchlist({ onSelectStock, currentSymbol }: WatchlistProps) {
   const [symbols, setSymbols] = useState<string[]>(getStoredWatchlist);
   const [addInput, setAddInput] = useState("");
   const [showAdd, setShowAdd] = useState(false);
+  const { language } = useTheme();
+  const t = (key: keyof typeof translations.en) => {
+    return translations[language]?.[key] || translations.en[key] || key;
+  };
 
   useEffect(() => {
     storeWatchlist(symbols);
@@ -79,7 +85,7 @@ export function Watchlist({ onSelectStock, currentSymbol }: WatchlistProps) {
       <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
         <CardTitle className="text-base font-medium flex items-center gap-2">
           <Star className="h-4 w-4" />
-          Watchlist
+          {t("watchlist")}
         </CardTitle>
         <Button
           data-testid="button-add-watchlist"
@@ -95,7 +101,7 @@ export function Watchlist({ onSelectStock, currentSymbol }: WatchlistProps) {
           <div className="flex gap-1 mb-3">
             <Input
               data-testid="input-watchlist-symbol"
-              placeholder="Symbol (e.g. MSFT)"
+              placeholder={t("watchlistSearchPlaceholder")}
               value={addInput}
               onChange={(e) => setAddInput(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === "Enter" && addSymbol()}
@@ -108,7 +114,7 @@ export function Watchlist({ onSelectStock, currentSymbol }: WatchlistProps) {
               onClick={addSymbol}
               disabled={!addInput.trim()}
             >
-              Add
+              {t("add")}
             </Button>
           </div>
         )}
@@ -124,8 +130,8 @@ export function Watchlist({ onSelectStock, currentSymbol }: WatchlistProps) {
         {symbols.length === 0 && (
           <div className="text-center py-6 text-sm text-muted-foreground">
             <Star className="h-8 w-8 mx-auto mb-2 opacity-40" />
-            <p>Your watchlist is empty</p>
-            <p className="text-xs mt-1">Click + to add stocks</p>
+            <p>{t("watchlistEmpty")}</p>
+            <p className="text-xs mt-1">{t("watchlistEmptySub")}</p>
           </div>
         )}
 

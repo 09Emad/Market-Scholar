@@ -3,6 +3,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Layers } from "lucide-react";
 import type { PredictionResult } from "@shared/schema";
+import { useTheme } from "@/components/theme-toggle";
+import { translations } from "@/lib/translations";
 
 interface FeatureImportanceProps {
   prediction: PredictionResult | null;
@@ -12,13 +14,17 @@ interface FeatureImportanceProps {
 const COLORS = ["#1E3A8A", "#2563EB", "#3B82F6", "#60A5FA", "#93C5FD", "#BFDBFE", "#DBEAFE"];
 
 export function FeatureImportance({ prediction, isLoading }: FeatureImportanceProps) {
+  const { language } = useTheme();
+  const t = (key: keyof typeof translations.en) => {
+    return translations[language]?.[key] || translations.en[key] || key;
+  };
   if (isLoading) {
     return (
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <Layers className="h-4 w-4" />
-            Feature Importance
+            {t("featureImportance")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
@@ -34,14 +40,14 @@ export function FeatureImportance({ prediction, isLoading }: FeatureImportancePr
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <Layers className="h-4 w-4" />
-            Feature Importance
+            {t("featureImportance")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Layers className="h-10 w-10 text-muted-foreground mb-3" />
             <p className="text-sm text-muted-foreground">
-              Feature importance appears after prediction
+              {t("featureImportanceAppearsAfter")}
             </p>
           </div>
         </CardContent>
@@ -58,7 +64,7 @@ export function FeatureImportance({ prediction, isLoading }: FeatureImportancePr
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-medium flex items-center gap-2">
           <Layers className="h-4 w-4" />
-          Feature Importance
+          {t("featureImportance")}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0">

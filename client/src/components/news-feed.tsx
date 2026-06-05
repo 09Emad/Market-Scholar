@@ -4,6 +4,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Newspaper, ExternalLink, ThumbsUp, ThumbsDown, Minus } from "lucide-react";
 import type { NewsArticle } from "@shared/schema";
+import { useTheme } from "@/components/theme-toggle";
+import { translations } from "@/lib/translations";
 
 interface NewsFeedProps {
   articles: NewsArticle[] | null;
@@ -11,23 +13,23 @@ interface NewsFeedProps {
   symbol: string;
 }
 
-function getSentimentConfig(sentiment?: string) {
+function getSentimentConfig(sentiment?: string, t?: any) {
   switch (sentiment) {
     case "positive":
       return {
-        label: "Positive",
+        label: t ? t("positive") : "Positive",
         icon: <ThumbsUp className="h-3 w-3" />,
         className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
       };
     case "negative":
       return {
-        label: "Negative",
+        label: t ? t("negative") : "Negative",
         icon: <ThumbsDown className="h-3 w-3" />,
         className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
       };
     default:
       return {
-        label: "Neutral",
+        label: t ? t("neutral") : "Neutral",
         icon: <Minus className="h-3 w-3" />,
         className: "bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400",
       };
@@ -35,13 +37,17 @@ function getSentimentConfig(sentiment?: string) {
 }
 
 export function NewsFeed({ articles, isLoading, symbol }: NewsFeedProps) {
+  const { language } = useTheme();
+  const t = (key: keyof typeof translations.en) => {
+    return translations[language]?.[key] || translations.en[key] || key;
+  };
   if (isLoading) {
     return (
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <Newspaper className="h-4 w-4" />
-            News & Sentiment
+            {t("newsSentiment")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
@@ -68,14 +74,14 @@ export function NewsFeed({ articles, isLoading, symbol }: NewsFeedProps) {
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <Newspaper className="h-4 w-4" />
-            News & Sentiment
+            {t("newsSentiment")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Newspaper className="h-10 w-10 text-muted-foreground mb-3" />
             <p className="text-sm text-muted-foreground">
-              {symbol ? "No recent news available" : "Select a stock to view related news"}
+              {symbol ? t("noRecentNews") : t("selectStockNews")}
             </p>
           </div>
         </CardContent>
@@ -94,28 +100,28 @@ export function NewsFeed({ articles, isLoading, symbol }: NewsFeedProps) {
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-medium flex items-center gap-2">
           <Newspaper className="h-4 w-4" />
-          News & Sentiment for {symbol}
+          {t("newsSentimentFor")} {symbol}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0">
         <div className="flex gap-2 mb-3 flex-wrap">
           <Badge variant="secondary" className="text-xs gap-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 no-default-hover-elevate no-default-active-elevate">
             <ThumbsUp className="h-3 w-3" />
-            {sentimentCounts.positive} Positive
+            {sentimentCounts.positive} {t("positive")}
           </Badge>
           <Badge variant="secondary" className="text-xs gap-1 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 no-default-hover-elevate no-default-active-elevate">
             <ThumbsDown className="h-3 w-3" />
-            {sentimentCounts.negative} Negative
+            {sentimentCounts.negative} {t("negative")}
           </Badge>
           <Badge variant="secondary" className="text-xs gap-1 no-default-hover-elevate no-default-active-elevate">
             <Minus className="h-3 w-3" />
-            {sentimentCounts.neutral} Neutral
+            {sentimentCounts.neutral} {t("neutral")}
           </Badge>
         </div>
         <ScrollArea className="h-[400px]">
           <div className="space-y-2 pr-3">
             {articles.map((article, i) => {
-              const sentConfig = getSentimentConfig(article.sentiment);
+              const sentConfig = getSentimentConfig(article.sentiment, t);
               return (
                 <a
                   key={i}

@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { POPULAR_STOCKS } from "@/lib/constants";
+import { useTheme } from "@/components/theme-toggle";
+import { translations } from "@/lib/translations";
 
 interface StockSearchProps {
   onSelectStock: (symbol: string) => void;
@@ -13,6 +15,11 @@ interface StockSearchProps {
 export function StockSearch({ onSelectStock, currentSymbol }: StockSearchProps) {
   const [query, setQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
+  const { language } = useTheme();
+
+  const t = (key: keyof typeof translations.en) => {
+    return translations[language]?.[key] || translations.en[key] || key;
+  };
 
   const trimmed = query.trim().toUpperCase();
 
@@ -52,7 +59,7 @@ export function StockSearch({ onSelectStock, currentSymbol }: StockSearchProps) 
         <Input
           data-testid="input-stock-search"
           type="search"
-          placeholder="Search stocks (e.g., AAPL, UBER, COIN)..."
+          placeholder={t("searchPlaceholder")}
           className="pl-10 pr-10 font-mono"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -95,7 +102,7 @@ export function StockSearch({ onSelectStock, currentSymbol }: StockSearchProps) 
                   {trimmed}
                 </Badge>
                 <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors flex items-center gap-1">
-                  Search for <span className="font-semibold text-foreground">{trimmed}</span> directly
+                  {t("searchFor")} <span className="font-semibold text-foreground">{trimmed}</span> {t("directly")}
                   <ArrowRight className="h-3 w-3 ml-1 opacity-60" />
                 </span>
               </button>
@@ -107,7 +114,7 @@ export function StockSearch({ onSelectStock, currentSymbol }: StockSearchProps) 
                 {!query && (
                   <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                     <TrendingUp className="h-3 w-3" />
-                    Popular Stocks
+                    {t("popularStocks")}
                   </div>
                 )}
                 {filtered.map((stock) => (
@@ -130,7 +137,7 @@ export function StockSearch({ onSelectStock, currentSymbol }: StockSearchProps) 
             ) : (
               !showDirectSearch && (
                 <div className="p-4 text-center text-muted-foreground text-sm">
-                  No stocks found for "{query}"
+                  {t("noStocksFound")} "{query}"
                 </div>
               )
             )}

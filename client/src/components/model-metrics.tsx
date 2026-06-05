@@ -4,6 +4,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Target, Gauge } from "lucide-react";
 import type { PredictionResult } from "@shared/schema";
+import { useTheme } from "@/components/theme-toggle";
+import { translations } from "@/lib/translations";
 
 interface ModelMetricsProps {
   prediction: PredictionResult | null;
@@ -11,13 +13,17 @@ interface ModelMetricsProps {
 }
 
 export function ModelMetrics({ prediction, isLoading }: ModelMetricsProps) {
+  const { language } = useTheme();
+  const t = (key: keyof typeof translations.en) => {
+    return translations[language]?.[key] || translations.en[key] || key;
+  };
   if (isLoading) {
     return (
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <Target className="h-4 w-4" />
-            Model Evaluation
+            {t("modelEvaluation")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
@@ -37,14 +43,14 @@ export function ModelMetrics({ prediction, isLoading }: ModelMetricsProps) {
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <Target className="h-4 w-4" />
-            Model Evaluation
+            {t("modelEvaluation")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Gauge className="h-10 w-10 text-muted-foreground mb-3" />
             <p className="text-sm text-muted-foreground">
-              Metrics appear after generating a prediction
+              {t("metricsAppearAfter")}
             </p>
           </div>
         </CardContent>
@@ -55,10 +61,10 @@ export function ModelMetrics({ prediction, isLoading }: ModelMetricsProps) {
   const metrics = prediction.modelMetrics;
 
   const metricsList = [
-    { label: "Accuracy", value: metrics.accuracy, color: "#3B82F6" },
-    { label: "Precision", value: metrics.precision, color: "#10B981" },
-    { label: "Recall", value: metrics.recall, color: "#F59E0B" },
-    { label: "F1-Score", value: metrics.f1Score, color: "#8B5CF6" },
+    { label: t("accuracy"), value: metrics.accuracy, color: "#3B82F6" },
+    { label: t("precision"), value: metrics.precision, color: "#10B981" },
+    { label: t("recall"), value: metrics.recall, color: "#F59E0B" },
+    { label: t("f1Score"), value: metrics.f1Score, color: "#8B5CF6" },
   ];
 
   return (
@@ -66,7 +72,7 @@ export function ModelMetrics({ prediction, isLoading }: ModelMetricsProps) {
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-medium flex items-center gap-2">
           <Target className="h-4 w-4" />
-          Model Evaluation Metrics
+          {t("modelEvaluationMetrics")}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0">
@@ -93,7 +99,7 @@ export function ModelMetrics({ prediction, isLoading }: ModelMetricsProps) {
         </div>
 
         <div className="p-3 rounded-md bg-muted/40">
-          <p className="text-xs text-muted-foreground mb-2">Metrics Comparison</p>
+          <p className="text-xs text-muted-foreground mb-2">{t("metricsComparison")}</p>
           <div className="h-[140px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart

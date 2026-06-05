@@ -1,10 +1,26 @@
 import { useState, useEffect, createContext, useContext, type ReactNode } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Language } from "@/lib/translations";
 
-const ThemeContext = createContext<{ isDark: boolean; toggle: () => void }>({
+export type AccentColor = "indigo" | "emerald" | "amber" | "violet" | "rose";
+
+type ThemeContextType = {
+  isDark: boolean;
+  accent: AccentColor;
+  language: Language;
+  toggle: () => void;
+  setAccent: (accent: AccentColor) => void;
+  setLanguage: (lang: Language) => void;
+};
+
+const ThemeContext = createContext<ThemeContextType>({
   isDark: true,
+  accent: "indigo",
+  language: "en",
   toggle: () => {},
+  setAccent: () => {},
+  setLanguage: () => {},
 });
 
 export function useTheme() {
@@ -21,6 +37,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return true;
   });
 
+  const [accent, setAccentState] = useState<AccentColor>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("stockvision-accent") as AccentColor;
+      return stored || "indigo";
+    }
+    return "indigo";
+  });
+
+  const [language, setLanguageState] = useState<Language>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("stockvision-lang") as Language;
+      return stored || "en";
+    }
+    return "en";
+  });
+
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add("dark");
@@ -30,8 +62,26 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("stockvision-theme", isDark ? "dark" : "light");
   }, [isDark]);
 
+  useEffect(() => {
+    document.documentElement.classList.remove("theme-emerald", "theme-amber", "theme-violet", "theme-rose");
+    if (accent !== "indigo") {
+      document.documentElement.classList.add(`theme-${accent}`);
+    }
+    localStorage.setItem("stockvision-accent", accent);
+  }, [accent]);
+
+  useEffect(() => {
+    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+    document.documentElement.lang = language;
+    localStorage.setItem("stockvision-lang", language);
+  }, [language]);
+
+  const toggle = () => setIsDark((d) => !d);
+  const setAccent = (color: AccentColor) => setAccentState(color);
+  const setLanguage = (lang: Language) => setLanguageState(lang);
+
   return (
-    <ThemeContext.Provider value={{ isDark, toggle: () => setIsDark((d) => !d) }}>
+    <ThemeContext.Provider value={{ isDark, accent, language, toggle, setAccent, setLanguage }}>
       {children}
     </ThemeContext.Provider>
   );

@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { useLocation } from "wouter";
 import { History, TrendingUp, TrendingDown, CheckCircle, XCircle, Clock, ChevronDown, Timer, DollarSign, Target, BarChart3, Lock, RefreshCw, Search } from "lucide-react";
 import type { Prediction } from "@shared/schema";
+import { useTheme } from "@/components/theme-toggle";
+import { translations } from "@/lib/translations";
 
 interface PredictionHistoryProps {
   predictions: Prediction[] | null;
@@ -15,7 +17,7 @@ interface PredictionHistoryProps {
   isAuthenticated: boolean;
 }
 
-function getTimeInfo(targetDateStr: string, predictionDate: Date | string | null, targetExpiryAt?: string | null) {
+function getTimeInfo(targetDateStr: string, predictionDate: Date | string | null, targetExpiryAt?: string | null, t?: any) {
   const now = new Date();
   let target: Date;
   if (targetExpiryAt) {
@@ -30,37 +32,69 @@ function getTimeInfo(targetDateStr: string, predictionDate: Date | string | null
   const diffMs = target.getTime() - now.getTime();
   const isExpired = diffMs <= 0;
 
+  const getT = t || ((k: string) => k);
+  const formattedDate = target.toLocaleDateString(t ? (getT("accuracy") === "Accuracy" ? "en-US" : "tr-TR") : "en-US", { month: "short", day: "numeric", year: "numeric" });
+
   if (isExpired) {
     const elapsed = Math.abs(diffMs);
     const days = Math.floor(elapsed / (1000 * 60 * 60 * 24));
     const hours = Math.floor((elapsed % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     let label = "";
-    if (days > 0) {
-      label = `Expired ${days}d ${hours}h ago`;
-    } else if (hours > 0) {
-      label = `Expired ${hours}h ago`;
+    
+    const isEn = getT("accuracy") === "Accuracy";
+    if (isEn) {
+      if (days > 0) {
+        label = `Expired ${days}d ${hours}h ago`;
+      } else if (hours > 0) {
+        label = `Expired ${hours}h ago`;
+      } else {
+        const mins = Math.floor(elapsed / (1000 * 60));
+        label = `Expired ${mins}m ago`;
+      }
     } else {
-      const mins = Math.floor(elapsed / (1000 * 60));
-      label = `Expired ${mins}m ago`;
+      if (days > 0) {
+        label = `${days}g ${hours}s önce süresi doldu`;
+      } else if (hours > 0) {
+        label = `${hours}s önce süresi doldu`;
+      } else {
+        const mins = Math.floor(elapsed / (1000 * 60));
+        label = `${mins}dk önce süresi doldu`;
+      }
     }
-    return { isExpired: true, label, detail: `Target: ${target.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}` };
+    
+    return { isExpired: true, label, detail: `${isEn ? "Target" : "Hedef"}: ${formattedDate}` };
   } else {
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     let label = "";
-    if (days > 0) {
-      label = `${days}d ${hours}h remaining`;
-    } else if (hours > 0) {
-      label = `${hours}h ${mins}m remaining`;
+    const isEn = getT("accuracy") === "Accuracy";
+    if (isEn) {
+      if (days > 0) {
+        label = `${days}d ${hours}h remaining`;
+      } else if (hours > 0) {
+        label = `${hours}h ${mins}m remaining`;
+      } else {
+        label = `${mins}m remaining`;
+      }
     } else {
-      label = `${mins}m remaining`;
+      if (days > 0) {
+        label = `${days}g ${hours}s kaldı`;
+      } else if (hours > 0) {
+        label = `${hours}s ${mins}dk kaldı`;
+      } else {
+        label = `${mins}dk kaldı`;
+      }
     }
-    return { isExpired: false, label, detail: `Valid until: ${target.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}` };
+    return { isExpired: false, label, detail: `${getT("validUntil")} ${formattedDate}` };
   }
 }
 
 function PredictionDetailPanel({ pred }: { pred: Prediction }) {
+  const { language } = useTheme();
+  const t = (key: keyof typeof translations.en) => {
+    return translations[language]?.[key] || translations.en[key] || key;
+  };
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [isFetchingLive, setIsFetchingLive] = useState(false);
   const [liveError, setLiveError] = useState<string | null>(null);
@@ -84,17 +118,17 @@ function PredictionDetailPanel({ pred }: { pred: Prediction }) {
     }
   };
 
-  const timeInfo = getTimeInfo(pred.targetDate, pred.predictionDate, pred.targetExpiryAt);
+  const timeInfo = getTimeInfo(pred.targetDate, pred.predictionDate, pred.targetExpiryAt, t);
   const isUp = pred.direction === "up";
 
   const statusLabel =
     pred.wasCorrect === 1
-      ? "Correct"
+      ? t("correct")
       : pred.wasCorrect === 0
-        ? "Incorrect"
+        ? t("incorrect")
         : timeInfo.isExpired
-          ? "Awaiting Validation"
-          : "Active";
+          ? t("awaitingValidation")
+          : t("active");
 
   const statusColor =
     pred.wasCorrect === 1
@@ -138,7 +172,7 @@ function PredictionDetailPanel({ pred }: { pred: Prediction }) {
         <div className="p-2 rounded-md bg-muted/40">
           <div className="flex items-center gap-1.5 mb-1">
             <DollarSign className="h-3 w-3 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Price at Prediction</span>
+            <span className="text-xs text-muted-foreground">{t("priceAtPrediction")}</span>
           </div>
           <p className="text-sm font-mono font-medium" data-testid={`text-pred-price-${pred.id}`}>
             {pred.currentPrice != null ? `$${pred.currentPrice.toFixed(2)}` : "N/A"}
@@ -149,7 +183,7 @@ function PredictionDetailPanel({ pred }: { pred: Prediction }) {
           <div className="p-2 rounded-md bg-muted/40">
             <div className="flex items-center gap-1.5 mb-1">
               <BarChart3 className="h-3 w-3 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Price at Expiry</span>
+              <span className="text-xs text-muted-foreground">{t("priceAtExpiry")}</span>
             </div>
             <p className="text-sm font-mono font-medium" data-testid={`text-actual-price-${pred.id}`}>
               ${pred.actualPrice.toFixed(2)}
@@ -170,7 +204,7 @@ function PredictionDetailPanel({ pred }: { pred: Prediction }) {
             <div className="flex items-center justify-between gap-1 mb-1">
               <div className="flex items-center gap-1">
                 <Timer className="h-3 w-3 text-muted-foreground animate-pulse" />
-                <span className="text-[10px] text-muted-foreground font-medium">Live Market</span>
+                <span className="text-[10px] text-muted-foreground font-medium">{t("liveMarket")}</span>
               </div>
               {livePrice !== null && (
                 <button
@@ -195,10 +229,10 @@ function PredictionDetailPanel({ pred }: { pred: Prediction }) {
                 {isFetchingLive ? (
                   <>
                     <RefreshCw className="h-2.5 w-2.5 animate-spin mr-1" />
-                    Loading...
+                    {t("analyzing")}
                   </>
                 ) : (
-                  "Compare Price"
+                  t("comparePrice")
                 )}
               </Button>
             ) : (
@@ -234,11 +268,11 @@ function PredictionDetailPanel({ pred }: { pred: Prediction }) {
         <div className="p-2 rounded-md bg-muted/40">
           <div className="flex items-center gap-1.5 mb-1">
             <Target className="h-3 w-3 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Predicted Direction</span>
+            <span className="text-xs text-muted-foreground">{t("predictedDirection")}</span>
           </div>
           <p className={`text-sm font-medium flex items-center gap-1 ${isUp ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
             {isUp ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-            {isUp ? "Up" : "Down"} ({(pred.confidence * 100).toFixed(1)}%)
+            {isUp ? t("up") : t("down")} ({(pred.confidence * 100).toFixed(1)}%)
           </p>
         </div>
       </div>
@@ -253,10 +287,10 @@ function PredictionDetailPanel({ pred }: { pred: Prediction }) {
             )}
             <div>
               <p className={`text-sm font-medium ${pred.wasCorrect === 1 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
-                {pred.wasCorrect === 1 ? "Prediction was correct" : "Prediction was wrong"}
+                {pred.wasCorrect === 1 ? t("predictionWasCorrect") : t("predictionWasWrong")}
               </p>
               <p className="text-xs text-muted-foreground">
-                Actual: {pred.actualDirection === "up" ? "Up" : "Down"} | Predicted: {isUp ? "Up" : "Down"}
+                {t("actual")}: {pred.actualDirection === "up" ? t("up") : t("down")} | {t("predicted")}: {isUp ? t("up") : t("down")}
               </p>
             </div>
           </div>
@@ -266,7 +300,7 @@ function PredictionDetailPanel({ pred }: { pred: Prediction }) {
       <div className="text-xs text-muted-foreground">
         <span>{timeInfo.detail}</span>
         {pred.sentimentScore != null && (
-          <span className="ml-3">Sentiment: {pred.sentimentScore > 0 ? "+" : ""}{pred.sentimentScore.toFixed(2)}</span>
+          <span className="ml-3">{t("sentimentScore")}: {pred.sentimentScore > 0 ? "+" : ""}{pred.sentimentScore.toFixed(2)}</span>
         )}
       </div>
     </div>
@@ -276,6 +310,10 @@ function PredictionDetailPanel({ pred }: { pred: Prediction }) {
 type StatusFilter = "all" | "active" | "correct" | "incorrect";
 
 export function PredictionHistory({ predictions, isLoading, isAuthenticated }: PredictionHistoryProps) {
+  const { language } = useTheme();
+  const t = (key: keyof typeof translations.en) => {
+    return translations[language]?.[key] || translations.en[key] || key;
+  };
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
@@ -288,7 +326,7 @@ export function PredictionHistory({ predictions, isLoading, isAuthenticated }: P
         <CardHeader className="pb-2 relative z-10">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <History className="h-4 w-4 text-muted-foreground" />
-            Prediction History
+            {t("predictionHistory")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 pt-2 text-center flex flex-col items-center justify-center min-h-[300px] relative z-10">
@@ -296,17 +334,17 @@ export function PredictionHistory({ predictions, isLoading, isAuthenticated }: P
             <Lock className="h-5 w-5 text-primary" />
           </div>
           <h3 className="text-sm font-bold text-foreground mb-1">
-            Private Prediction History
+            {t("privatePredictionHistory")}
           </h3>
           <p className="text-xs text-muted-foreground max-w-sm mb-5 leading-relaxed">
-            Please sign in to track your LSTM neural network predictions, view model accuracy metrics, and manage your analysis portfolio.
+            {t("historyPlaceholder")}
           </p>
           <Button
             onClick={() => setLocation("/auth")}
             size="sm"
             className="font-semibold px-6 shadow-sm shadow-primary/10 hover:shadow-primary/20 transition-all duration-200 active:scale-95"
           >
-            Sign In to Account
+            {t("signInToAccount")}
           </Button>
         </CardContent>
       </Card>
@@ -319,7 +357,7 @@ export function PredictionHistory({ predictions, isLoading, isAuthenticated }: P
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <History className="h-4 w-4" />
-            Prediction History
+            {t("predictionHistory")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
@@ -339,14 +377,14 @@ export function PredictionHistory({ predictions, isLoading, isAuthenticated }: P
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <History className="h-4 w-4" />
-            Prediction History
+            {t("predictionHistory")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <History className="h-10 w-10 text-muted-foreground mb-3" />
             <p className="text-sm text-muted-foreground">
-              No predictions logged yet
+              {t("noPredictionsLogged")}
             </p>
           </div>
         </CardContent>
@@ -375,10 +413,10 @@ export function PredictionHistory({ predictions, isLoading, isAuthenticated }: P
   });
 
   const filterChips: { label: string; value: StatusFilter; count: number; color: string; activeColor: string }[] = [
-    { label: "All", value: "all", count: totalPredictions, color: "bg-muted/60 text-muted-foreground hover:bg-muted", activeColor: "bg-primary text-primary-foreground" },
-    { label: "Active", value: "active", count: pendingPredictions, color: "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/50", activeColor: "bg-amber-500 text-white" },
-    { label: "Correct", value: "correct", count: correctPredictions, color: "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-950/50", activeColor: "bg-emerald-500 text-white" },
-    { label: "Wrong", value: "incorrect", count: incorrectPredictions, color: "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/50", activeColor: "bg-red-500 text-white" },
+    { label: t("all"), value: "all", count: totalPredictions, color: "bg-muted/60 text-muted-foreground hover:bg-muted", activeColor: "bg-primary text-primary-foreground" },
+    { label: t("active"), value: "active", count: pendingPredictions, color: "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/50", activeColor: "bg-amber-500 text-white" },
+    { label: t("correct"), value: "correct", count: correctPredictions, color: "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-950/50", activeColor: "bg-emerald-500 text-white" },
+    { label: t("wrong"), value: "incorrect", count: incorrectPredictions, color: "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/50", activeColor: "bg-red-500 text-white" },
   ];
 
   return (
@@ -386,7 +424,7 @@ export function PredictionHistory({ predictions, isLoading, isAuthenticated }: P
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-medium flex items-center gap-2">
           <History className="h-4 w-4" />
-          Prediction History
+          {t("predictionHistory")}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0">
@@ -395,25 +433,25 @@ export function PredictionHistory({ predictions, isLoading, isAuthenticated }: P
             <p className="text-lg font-bold font-mono" data-testid="text-total-predictions">
               {totalPredictions}
             </p>
-            <p className="text-xs text-muted-foreground">Total</p>
+            <p className="text-xs text-muted-foreground">{t("total")}</p>
           </div>
           <div className="p-2 rounded-md bg-emerald-50 dark:bg-emerald-950/20 text-center">
             <p className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400" data-testid="text-correct-predictions">
               {correctPredictions}
             </p>
-            <p className="text-xs text-muted-foreground">Correct</p>
+            <p className="text-xs text-muted-foreground">{t("correct")}</p>
           </div>
           <div className="p-2 rounded-md bg-red-50 dark:bg-red-950/20 text-center">
             <p className="text-lg font-bold font-mono text-red-600 dark:text-red-400" data-testid="text-incorrect-predictions">
               {incorrectPredictions}
             </p>
-            <p className="text-xs text-muted-foreground">Wrong</p>
+            <p className="text-xs text-muted-foreground">{t("wrong")}</p>
           </div>
           <div className="p-2 rounded-md bg-muted/40 text-center">
             <p className="text-lg font-bold font-mono" data-testid="text-accuracy-rate">
               {validatedCount > 0 ? `${accuracy.toFixed(1)}%` : "N/A"}
             </p>
-            <p className="text-xs text-muted-foreground">Accuracy</p>
+            <p className="text-xs text-muted-foreground">{t("accuracy")}</p>
           </div>
         </div>
 
@@ -423,7 +461,7 @@ export function PredictionHistory({ predictions, isLoading, isAuthenticated }: P
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
               id="history-search-input"
-              placeholder="Search by symbol (e.g. AAPL)..."
+              placeholder={t("searchBySymbol")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-8 h-8 text-xs bg-muted/30 border-border/50 focus-visible:ring-1 focus-visible:ring-primary/40"
@@ -452,7 +490,11 @@ export function PredictionHistory({ predictions, isLoading, isAuthenticated }: P
           <div className="flex items-center gap-2 mb-3 p-2 rounded-md bg-amber-50 dark:bg-amber-950/20">
             <Clock className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
             <p className="text-xs text-amber-700 dark:text-amber-400" data-testid="text-pending-count">
-              {pendingPredictions} prediction{pendingPredictions > 1 ? "s" : ""} awaiting validation
+              {language === "en" ? (
+                `${pendingPredictions} prediction${pendingPredictions > 1 ? "s" : ""} awaiting validation`
+              ) : (
+                `Doğrulama bekleyen ${pendingPredictions} tahmin var`
+              )}
             </p>
           </div>
         )}
@@ -462,8 +504,8 @@ export function PredictionHistory({ predictions, isLoading, isAuthenticated }: P
             {filteredPredictions.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
                 <Search className="h-8 w-8 text-muted-foreground/40 mb-2" />
-                <p className="text-xs text-muted-foreground">No predictions match your filters.</p>
-                <button onClick={() => { setSearchQuery(""); setStatusFilter("all"); }} className="text-xs text-primary mt-1 hover:underline">Clear filters</button>
+                <p className="text-xs text-muted-foreground">{t("noPredictionsMatch")}</p>
+                <button onClick={() => { setSearchQuery(""); setStatusFilter("all"); }} className="text-xs text-primary mt-1 hover:underline">{t("clearFilters")}</button>
               </div>
             ) : filteredPredictions.map((pred) => {
               const isUp = pred.direction === "up";
@@ -501,7 +543,7 @@ export function PredictionHistory({ predictions, isLoading, isAuthenticated }: P
                           ) : (
                             <TrendingDown className="h-3 w-3 text-red-500" />
                           )}
-                          {isUp ? "Up" : "Down"}
+                          {isUp ? t("up") : t("down")}
                         </span>
                         <span className="text-xs font-mono text-muted-foreground">
                           {(pred.confidence * 100).toFixed(0)}%

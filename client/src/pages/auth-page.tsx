@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "@/components/theme-toggle";
+import { translations } from "@/lib/translations";
 import {
   Form,
   FormControl,
@@ -38,6 +40,10 @@ export default function AuthPage() {
   const { loginMutation, registerMutation } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const { language } = useTheme();
+  const t = (key: keyof typeof translations.en) => {
+    return translations[language]?.[key] || translations.en[key] || key;
+  };
 
   const { data: googleConfig } = useQuery<{ configured: boolean }>({
     queryKey: ["/api/auth/google/config"],

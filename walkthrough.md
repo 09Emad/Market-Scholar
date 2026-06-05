@@ -217,6 +217,14 @@ docker exec -i market_scholar_db psql -U market_user -d market_scholar -c "ALTER
 ```
 
 
+## 🎨 تخصيص إعدادات الموقع وترتيب الواجهة (Language & Theme Placement)
 
+تمت إعادة هيكلة وترتيب خيارات التخصيص داخل نافذة الإعدادات (`Settings Dialog`) استجابةً لطلب المستخدم لوضع خيارات اختيار اللغة بشكل مباشر أسفل خيار نمط المظهر (الوضع الداكن/الفاتح).
 
+### التغييرات والملفات المعدلة:
+* **الملف المعدل:** [settings-dialog.tsx](file:///c:/Users/emada/Market-Scholar/client/src/components/settings-dialog.tsx)
+  * إعادة ترتيب الأقسام وتعديل واجهة المستخدم لوضع خيار اختيار اللغة (`Language`) مباشرة تحت خيار المود (`Appearance/Mode`) وبقائهما فوق خيار سمة اللون (`Accent Color`).
+
+### 📸 لقطة شاشة توضح الترتيب الجديد للإعدادات:
+![Settings Dialog Layout](C:/Users/emada/.gemini/antigravity-ide/brain/ac180c77-b4a7-48fc-98df-ebdaca8a8bfb/settings_dialog_1780693419679.png)
 

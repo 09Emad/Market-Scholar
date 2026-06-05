@@ -25,7 +25,9 @@ import type { StockQuote, NewsArticle, PredictionResult, Prediction } from "@sha
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useTheme } from "@/components/theme-toggle";
-import { LogOut, Sun, Moon } from "lucide-react";
+import { LogOut, Sun, Moon, Settings } from "lucide-react";
+import { translations } from "@/lib/translations";
+import { SettingsDialog } from "@/components/settings-dialog";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -39,7 +41,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
   const [, setLocation] = useLocation();
-  const { isDark, toggle: toggleTheme } = useTheme();
+  const { isDark, toggle: toggleTheme, language } = useTheme();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const t = (key: keyof typeof translations.en) => {
+    return translations[language]?.[key] || translations.en[key] || key;
+  };
   const [selectedSymbol, setSelectedSymbol] = useState<string>("");
   const [timeRange, setTimeRange] = useState("1m");
   const [activeTab, setActiveTab] = useState("overview");
@@ -157,7 +163,7 @@ useEffect(() => {
               <h1 className="text-lg font-bold tracking-tight">StockVision</h1>
             </div>
             <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
-              Academic Research
+              {t("academicResearch")}
             </Badge>
           </div>
           <div className="flex items-center gap-3">
@@ -177,25 +183,19 @@ useEffect(() => {
                   <DropdownMenuContent className="w-56" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal py-2 px-3">
                       <div className="flex flex-col space-y-1">
-                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Account Info</span>
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t("accountInfo")}</span>
                         <span className="text-sm font-bold text-foreground truncate">{user.username}</span>
                         <Badge variant="outline" className="text-[10px] py-0 px-1.5 w-fit border-emerald-500/20 bg-emerald-500/5 text-emerald-500">
-                          Active Student
+                          {t("activeStudent")}
                         </Badge>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuLabel className="font-normal py-1 px-3">
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Settings</span>
-                    </DropdownMenuLabel>
-                    <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer flex items-center justify-between py-2 px-3">
+                    <DropdownMenuItem onClick={() => setIsSettingsOpen(true)} className="cursor-pointer flex items-center justify-between py-2.5 px-3">
                       <div className="flex items-center gap-2">
-                        {isDark ? <Sun className="h-4 w-4 text-amber-500" /> : <Moon className="h-4 w-4 text-indigo-500" />}
-                        <span className="text-sm">{isDark ? "Light Mode" : "Dark Mode"}</span>
+                        <Settings className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium">{t("settings")}</span>
                       </div>
-                      <span className="text-[10px] text-muted-foreground bg-muted py-0.5 px-1.5 rounded">
-                        Theme
-                      </span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -204,10 +204,11 @@ useEffect(() => {
                       className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer py-2 px-3"
                     >
                       <LogOut className="mr-2 h-4 w-4" />
-                      <span className="text-sm">Log out</span>
+                      <span className="text-sm">{t("logout")}</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
               </div>
             ) : (
               <>
@@ -218,10 +219,19 @@ useEffect(() => {
                     onClick={() => setLocation("/auth")}
                     className="text-xs font-semibold"
                   >
-                    Sign In
+                    {t("signIn")}
                   </Button>
                 </div>
-                <ThemeToggle />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsSettingsOpen(true)}
+                  aria-label="Open settings"
+                  className="rounded-xl"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+                <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
               </>
             )}
           </div>
@@ -261,7 +271,7 @@ useEffect(() => {
                 ) : (
                   <Brain className="h-3.5 w-3.5" />
                 )}
-                {predictionMutation.isPending ? "Analyzing..." : "Generate Prediction"}
+                {predictionMutation.isPending ? t("analyzing") : t("generatePrediction")}
               </Button>
             </div>
           </div>
@@ -269,10 +279,10 @@ useEffect(() => {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="w-full max-w-full justify-start overflow-x-auto overflow-y-hidden flex-nowrap scrollbar-none md:w-auto md:inline-flex md:justify-center">
-            <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
-            <TabsTrigger value="analysis" data-testid="tab-analysis">Analysis & Prediction</TabsTrigger>
-            <TabsTrigger value="history" data-testid="tab-history">History & Metrics</TabsTrigger>
-            <TabsTrigger value="about" data-testid="tab-about">About & Risks</TabsTrigger>
+            <TabsTrigger value="overview" data-testid="tab-overview">{t("overview")}</TabsTrigger>
+            <TabsTrigger value="analysis" data-testid="tab-analysis">{t("analysisAndPrediction")}</TabsTrigger>
+            <TabsTrigger value="history" data-testid="tab-history">{t("historyAndMetrics")}</TabsTrigger>
+            <TabsTrigger value="about" data-testid="tab-about">{t("aboutAndRisks")}</TabsTrigger>
           </TabsList>
 
           {activeTab === "overview" && (

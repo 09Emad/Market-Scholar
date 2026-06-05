@@ -20,6 +20,8 @@ import {
   Bot,
   ArrowDownCircle,
 } from "lucide-react";
+import { useTheme } from "@/components/theme-toggle";
+import { translations } from "@/lib/translations";
 
 const isArabic = (text: string) => {
   const arabicPattern = /[\u0600-\u06FF]/;
@@ -41,6 +43,10 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { language } = useTheme();
+  const t = (key: keyof typeof translations.en) => {
+    return translations[language]?.[key] || translations.en[key] || key;
+  };
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -65,7 +71,7 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
         const greeting: Message = {
           id: "welcome",
           role: "assistant",
-          content: "Welcome to StockVision AI Assistant! 🤖💼\n\nI am your financial agent powered by a quantized Llama 3.2 model. I have access to an academic reference glossary of concepts like LSTM networks, RSI, and MACD. I can also fetch context for your selected stock (quotes, recent LSTM predictions, and news sentiments).\n\nHow can I help you analyze the markets today?",
+          content: t("aiAssistantWelcome"),
           timestamp: new Date().toISOString(),
         };
         setMessages([greeting]);
@@ -76,12 +82,12 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
         {
           id: "auth-intro",
           role: "assistant",
-          content: "Hello! I am the StockVision AI RAG Chatbot. Sign in to chat, explore predictions, explain technical indicators, or fetch real-time market sentiments.",
+          content: t("aiAssistantGuestWelcome"),
           timestamp: new Date().toISOString(),
         },
       ]);
     }
-  }, [user]);
+  }, [user, language]);
 
   // Save chat history to localStorage when changed
   useEffect(() => {
@@ -178,7 +184,7 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
     const greeting: Message = {
       id: "welcome",
       role: "assistant",
-      content: "Welcome to StockVision AI Assistant! 🤖💼\n\nI am your financial agent powered by a quantized Llama 3.2 model. I have access to an academic reference glossary of concepts like LSTM networks, RSI, and MACD. I can also fetch context for your selected stock (quotes, recent LSTM predictions, and news sentiments).\n\nHow can I help you analyze the markets today?",
+      content: t("aiAssistantWelcome"),
       timestamp: new Date().toISOString(),
     };
     setMessages([greeting]);
@@ -188,15 +194,15 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
   const getChips = () => {
     if (activeSymbol) {
       return [
-        { label: `Explain ${activeSymbol} prediction`, prompt: `Can you explain the current prediction and direction for ${activeSymbol}?` },
-        { label: `Analyze ${activeSymbol} sentiment`, prompt: `Summarize the news sentiment for ${activeSymbol} right now.` },
-        { label: `LSTM explanation`, prompt: `Explain why the LSTM neural network has this confidence score.` }
+        { label: language === "en" ? `Explain ${activeSymbol} prediction` : `${activeSymbol} tahminini açıkla`, prompt: `Can you explain the current prediction and direction for ${activeSymbol}?` },
+        { label: language === "en" ? `Analyze ${activeSymbol} sentiment` : `${activeSymbol} duyarlılığını analiz et`, prompt: `Summarize the news sentiment for ${activeSymbol} right now.` },
+        { label: language === "en" ? `LSTM explanation` : `LSTM açıklaması`, prompt: `Explain why the LSTM neural network has this confidence score.` }
       ];
     }
     return [
-      { label: "What is LSTM?", prompt: "Explain how Long Short-Term Memory (LSTM) neural networks predict stock prices." },
-      { label: "Explain RSI oscillator", prompt: "Explain the Relative Strength Index (RSI) formula and how it detects overbought/oversold levels." },
-      { label: "What is MACD?", prompt: "Explain MACD, the Signal Line, and how moving average crossovers signal trades." }
+      { label: t("whatIsLSTM"), prompt: "Explain how Long Short-Term Memory (LSTM) neural networks predict stock prices." },
+      { label: t("explainRSI"), prompt: "Explain the Relative Strength Index (RSI) formula and how it detects overbought/oversold levels." },
+      { label: t("whatIsMACD"), prompt: "Explain MACD, the Signal Line, and how moving average crossovers signal trades." }
     ];
   };
 
