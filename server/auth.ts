@@ -1,6 +1,7 @@
 import session from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Express } from "express";
 import { storage } from "./storage";
 import crypto from "crypto";
@@ -27,7 +28,8 @@ export async function hashPassword(password: string) {
   return `${buf.toString("hex")}.${salt}`;
 }
 
-export async function comparePasswords(supplied: string, hashed: string) {
+export async function comparePasswords(supplied: string, hashed: string | null | undefined) {
+  if (!hashed) return false;
   const [hash, salt] = hashed.split(".");
   if (!hash || !salt) return false;
   const buf = (await scrypt(supplied, salt, 64)) as Buffer;
@@ -73,7 +75,7 @@ export function setupAuth(app: Express) {
     new LocalStrategy(async (username, password, done) => {
       try {
         const user = await storage.getUserByUsername(username);
-        if (!user || !(await comparePasswords(password, user.password))) {
+        if (!user || !user.password || !(await comparePasswords(password, user.password))) {
           return done(null, false, { message: "Invalid username or password" });
         }
         return done(null, user);
@@ -82,6 +84,45 @@ export function setupAuth(app: Express) {
       }
     })
   );
+
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    passport.use(
+      new GoogleStrategy(
+        {
+          clientID: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          callbackURL: "/api/auth/google/callback",
+          proxy: true,
+        },
+        async (accessToken, refreshToken, profile, done) => {
+          try {
+            const googleId = profile.id;
+            const email = profile.emails?.[0]?.value || null;
+            const displayName = profile.displayName || profile.username || `user_${googleId.slice(-6)}`;
+
+            let user = await storage.getUserByGoogleId(googleId);
+            if (!user) {
+              let username = displayName.replace(/\s+/g, "").toLowerCase();
+              const existingByUsername = await storage.getUserByUsername(username);
+              if (existingByUsername) {
+                username = `${username}_${Math.floor(1000 + Math.random() * 9000)}`;
+              }
+
+              user = await storage.createUser({
+                username,
+                password: null, // No password for Google OAuth users
+                googleId,
+                email,
+              });
+            }
+            return done(null, user);
+          } catch (err) {
+            return done(err);
+          }
+        }
+      )
+    );
+  }
 
   passport.serializeUser((user: any, done) => {
     done(null, user.id);
@@ -191,5 +232,26 @@ export function setupAuth(app: Express) {
     }
     res.json(req.user);
   });
+
+  app.get("/api/auth/google/config", (req, res) => {
+    res.json({
+      configured: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
+    });
+  });
+
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    app.get(
+      "/api/auth/google",
+      passport.authenticate("google", { scope: ["profile", "email"] })
+    );
+
+    app.get(
+      "/api/auth/google/callback",
+      passport.authenticate("google", { failureRedirect: "/auth?error=google_failed" }),
+      (req, res) => {
+        res.redirect("/");
+      }
+    );
+  }
 }
 

@@ -1,12 +1,14 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "@tanstack/react-query";
 import { insertUserSchema, InsertUser, loginSchema } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import {
   Form,
   FormControl,
@@ -36,6 +38,25 @@ export default function AuthPage() {
   const { loginMutation, registerMutation } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+
+  const { data: googleConfig } = useQuery<{ configured: boolean }>({
+    queryKey: ["/api/auth/google/config"],
+  });
+
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "google_failed") {
+      toast({
+        title: "Google authentication failed",
+        description: "Please try again or log in with your local account.",
+        variant: "destructive",
+      });
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, [toast]);
 
   const loginForm = useForm<InsertUser>({
     resolver: zodResolver(loginSchema),
@@ -456,6 +477,38 @@ export default function AuthPage() {
               </Card>
             </TabsContent>
           </Tabs>
+
+          <div className="space-y-4">
+            <div className="relative flex py-2 items-center">
+              <div className="flex-grow border-t border-border/20"></div>
+              <span className="flex-shrink mx-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">Or continue with</span>
+              <div className="flex-grow border-t border-border/20"></div>
+            </div>
+
+            <Button
+              variant="outline"
+              type="button"
+              className="w-full font-semibold text-sm h-11 border-border/60 hover:bg-muted/40 backdrop-blur-xl rounded-xl transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 group relative overflow-hidden"
+              disabled={!googleConfig?.configured}
+              onClick={() => {
+                window.location.href = "/api/auth/google";
+              }}
+            >
+              {googleConfig?.configured && (
+                <span className="absolute inset-0 bg-gradient-to-r from-primary/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+              )}
+              
+              <svg className={`h-5 w-5 mr-1 ${!googleConfig?.configured ? "opacity-40 grayscale" : ""}`} viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                <g transform="matrix(1, 0, 0, 1, 0, 0)">
+                  <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.6h3.29c1.92,-1.77 3.02,-4.38 3.02,-7.4C21.65,11.75 21.55,11.4 21.35,11.1z" fill="#4285F4" />
+                  <path d="M12,20.62c2.43,0 4.47,-0.8 5.96,-2.19l-3.29,-2.6c-0.91,0.61 -2.08,0.98 -3.37,0.98 -2.35,0 -4.34,-1.59 -5.05,-3.72H2.86v2.7C4.34,18.8 8.01,20.62 12,20.62z" fill="#34A853" />
+                  <path d="M6.95,13.09C6.77,12.55 6.77,11.96 6.95,11.42V8.72H2.86c-0.62,1.24 -0.98,2.65 -0.98,4.14s0.36,2.9 0.98,4.14L6.95,13.09z" fill="#FBBC05" />
+                  <path d="M12,6.09c1.32,0 2.5,0.45 3.44,1.35l2.58,-2.58C16.46,3.34 14.41,2.5 12,2.5c-4.01,0 -7.67,1.82 -9.14,4.82l4.09,2.7C7.66,7.68 9.65,6.09 12,6.09z" fill="#EA4335" />
+                </g>
+              </svg>
+              {googleConfig?.configured ? "Sign in with Google" : "Google Sign-In (Not Configured)"}
+            </Button>
+          </div>
 
           <div className="text-center text-[11px] text-muted-foreground border-t border-border/20 pt-4">
             StockVision Platform • Open-Source Research • Academic Graduation Thesis

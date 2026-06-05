@@ -6,7 +6,9 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  password: text("password"), // Nullable for Google OAuth users
+  googleId: text("google_id").unique(),
+  email: text("email"),
 });
 
 export const predictions = pgTable("predictions", {
@@ -67,6 +69,7 @@ export const loginSchema = z.object({
 export const insertPredictionSchema = createInsertSchema(predictions);
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type DBInsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type InsertPrediction = z.infer<typeof insertPredictionSchema>;
 export type Prediction = typeof predictions.$inferSelect;

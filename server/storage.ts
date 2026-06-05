@@ -1,11 +1,12 @@
-import { predictions, type Prediction, type InsertPrediction, users, type User, type InsertUser, authLogs } from "@shared/schema";
+import { predictions, type Prediction, type InsertPrediction, users, type User, type InsertUser, type DBInsertUser, authLogs } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, isNull, and } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getUserByGoogleId(googleId: string): Promise<User | undefined>;
+  createUser(user: DBInsertUser): Promise<User>;
   createPrediction(prediction: InsertPrediction): Promise<Prediction>;
   getPredictions(userId?: string, limit?: number): Promise<Prediction[]>;
   getPredictionsBySymbol(symbol: string, userId?: string): Promise<Prediction[]>;
@@ -39,7 +40,12 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.googleId, googleId));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: DBInsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
