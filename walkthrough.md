@@ -173,8 +173,7 @@
 ![Mobile Auth View](C:/Users/emada/.gemini/antigravity-ide/brain/ac180c77-b4a7-48fc-98df-ebdaca8a8bfb/mobile_auth_view_1780619508656.png)
 
 #### 🌐 ثالثاً: معاينة مباشرة للتحديث أونلاين على النطاق https://stockvision-ai.com
-![Live Auth Page](C:/Users/emada/.gemini/antigravity-ide/brain/ac180c77-b4a7-48fc-98df-ebdaca8a8bfb/auth_page_1780687499912.png)
-![Live Register Page](C:/Users/emada/.gemini/antigravity-ide/brain/ac180c77-b4a7-48fc-98df-ebdaca8a8bfb/register_form_1780687510607.png)
+![Live Auth Page - Configured & Active](C:/Users/emada/.gemini/antigravity-ide/brain/ac180c77-b4a7-48fc-98df-ebdaca8a8bfb/google_signin_enabled_1780689496118.png)
 
 ### 🌐 3. إعداد النطاق المخصص والتأمين الكامل (Domain & SSL Setup)
 * **النطاق المخصص**: تم بنجاح ربط النطاق الجديد **`https://stockvision-ai.com`** بالسيرفر.
