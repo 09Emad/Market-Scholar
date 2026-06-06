@@ -169,7 +169,7 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
       const errorMsg: Message = {
         id: Math.random().toString(36).substring(7),
         role: "assistant",
-        content: "Sorry, I encountered an error. The local LLM server (Ollama) might be busy or unreachable. Please try again in a few moments.",
+        content: t("errorLocalLLM"),
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -255,7 +255,7 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
                   <h3 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-1">
                     StockVision AI
                     <Badge variant="outline" className="text-[9px] py-0 px-1 font-mono uppercase bg-primary/5 border-primary/25 text-primary scale-90">
-                      RAG Llama
+                      {t("ragLlama")}
                     </Badge>
                   </h3>
                   <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">

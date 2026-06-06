@@ -71,7 +71,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [accent]);
 
   useEffect(() => {
-    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+    document.documentElement.dir = "ltr";
     document.documentElement.lang = language;
     localStorage.setItem("stockvision-lang", language);
   }, [language]);

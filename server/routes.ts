@@ -275,11 +275,40 @@ export async function registerRoutes(
               recentNews: analyzedNews.slice(0, 5).map(article => ({
                 title: article.title,
                 sentiment: article.sentiment,
+                sentimentScore: article.sentimentScore,
               })),
             };
           }
         } catch (err) {
           console.error(`Error gathering stock context for RAG chatbot:`, err);
+        }
+      } else {
+        try {
+          const symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "JPM", "V", "JNJ", "WMT", "PG", "MA", "UNH", "DIS", "NFLX", "AMD", "INTC", "BA", "PYPL"];
+          const predictionsList = await storage.getPredictions(undefined, 50).catch(() => []);
+          const latestBySymbol: Record<string, any> = {};
+          for (const pred of predictionsList) {
+            if (!latestBySymbol[pred.symbol]) {
+              latestBySymbol[pred.symbol] = pred;
+            }
+          }
+          
+          const summaryLines = [];
+          for (const sym of symbols) {
+            const pred = latestBySymbol[sym];
+            if (pred) {
+              summaryLines.push(`- ${sym}: Price at prediction $${pred.currentPrice || "N/A"}, LSTM prediction direction: ${pred.direction.toUpperCase()} (Confidence: ${(pred.confidence * 100).toFixed(1)}%), News sentiment score: ${pred.sentimentScore !== null ? (pred.sentimentScore * 100).toFixed(0) + '%' : "N/A"}`);
+            }
+          }
+          
+          if (summaryLines.length > 0) {
+            stockContext = {
+              isGeneralMarket: true,
+              summary: summaryLines.join("\n")
+            };
+          }
+        } catch (err) {
+          console.error("Error gathering general market context for chatbot:", err);
         }
       }
 
