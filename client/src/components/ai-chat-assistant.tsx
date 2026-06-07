@@ -20,6 +20,8 @@ import {
   Bot,
   ArrowDownCircle,
 } from "lucide-react";
+import { useTheme } from "@/components/theme-toggle";
+import { translations } from "@/lib/translations";
 
 const isArabic = (text: string) => {
   const arabicPattern = /[\u0600-\u06FF]/;
@@ -41,14 +43,41 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { language } = useTheme();
+  const t = (key: keyof typeof translations.en) => {
+    return translations[language]?.[key] || translations.en[key] || key;
+  };
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [limit, setLimit] = useState<number>(10);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Fetch chat limit status
+  const fetchChatLimit = async () => {
+    if (!user) return;
+    try {
+      const response = await fetch("/api/ai/chat-limit");
+      if (response.ok) {
+        const data = await response.json();
+        setRemaining(data.remaining);
+        setLimit(data.limit);
+      }
+    } catch (error) {
+      console.error("Failed to fetch chat limit status:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (user && isOpen) {
+      fetchChatLimit();
+    }
+  }, [user, isOpen]);
 
   // Load chat history from localStorage on mount
   useEffect(() => {
@@ -65,7 +94,7 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
         const greeting: Message = {
           id: "welcome",
           role: "assistant",
-          content: "Welcome to StockVision AI Assistant! 🤖💼\n\nI am your financial agent powered by a quantized Llama 3.2 model. I have access to an academic reference glossary of concepts like LSTM networks, RSI, and MACD. I can also fetch context for your selected stock (quotes, recent LSTM predictions, and news sentiments).\n\nHow can I help you analyze the markets today?",
+          content: t("aiAssistantWelcome"),
           timestamp: new Date().toISOString(),
         };
         setMessages([greeting]);
@@ -76,12 +105,12 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
         {
           id: "auth-intro",
           role: "assistant",
-          content: "Hello! I am the StockVision AI RAG Chatbot. Sign in to chat, explore predictions, explain technical indicators, or fetch real-time market sentiments.",
+          content: t("aiAssistantGuestWelcome"),
           timestamp: new Date().toISOString(),
         },
       ]);
     }
-  }, [user]);
+  }, [user, language]);
 
   // Save chat history to localStorage when changed
   useEffect(() => {
@@ -121,6 +150,15 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
       return;
     }
 
+    if (remaining !== null && remaining <= 0) {
+      toast({
+        title: language === "en" ? "Limit Exceeded" : "Limit Aşıldı",
+        description: t("chatLimitExceeded").replace("{limit}", limit.toString()),
+        variant: "destructive",
+      });
+      return;
+    }
+
     const userMsg: Message = {
       id: Math.random().toString(36).substring(7),
       role: "user",
@@ -150,6 +188,11 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
       
       const data = await response.json();
       
+      // Update remaining count on success
+      if (data && typeof data.remainingMessages === "number") {
+        setRemaining(data.remainingMessages);
+      }
+
       const assistantMsg: Message = {
         id: Math.random().toString(36).substring(7),
         role: "assistant",
@@ -160,10 +203,14 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error: any) {
       console.error("Failed to fetch chat response:", error);
+      fetchChatLimit();
+
       const errorMsg: Message = {
         id: Math.random().toString(36).substring(7),
         role: "assistant",
-        content: "Sorry, I encountered an error. The local LLM server (Ollama) might be busy or unreachable. Please try again in a few moments.",
+        content: error.message?.includes("LIMIT_EXCEEDED")
+          ? t("chatLimitExceeded").replace("{limit}", limit.toString())
+          : t("errorLocalLLM"),
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -178,7 +225,7 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
     const greeting: Message = {
       id: "welcome",
       role: "assistant",
-      content: "Welcome to StockVision AI Assistant! 🤖💼\n\nI am your financial agent powered by a quantized Llama 3.2 model. I have access to an academic reference glossary of concepts like LSTM networks, RSI, and MACD. I can also fetch context for your selected stock (quotes, recent LSTM predictions, and news sentiments).\n\nHow can I help you analyze the markets today?",
+      content: t("aiAssistantWelcome"),
       timestamp: new Date().toISOString(),
     };
     setMessages([greeting]);
@@ -188,15 +235,15 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
   const getChips = () => {
     if (activeSymbol) {
       return [
-        { label: `Explain ${activeSymbol} prediction`, prompt: `Can you explain the current prediction and direction for ${activeSymbol}?` },
-        { label: `Analyze ${activeSymbol} sentiment`, prompt: `Summarize the news sentiment for ${activeSymbol} right now.` },
-        { label: `LSTM explanation`, prompt: `Explain why the LSTM neural network has this confidence score.` }
+        { label: language === "en" ? `Explain ${activeSymbol} prediction` : `${activeSymbol} tahminini açıkla`, prompt: `Can you explain the current prediction and direction for ${activeSymbol}?` },
+        { label: language === "en" ? `Analyze ${activeSymbol} sentiment` : `${activeSymbol} duyarlılığını analiz et`, prompt: `Summarize the news sentiment for ${activeSymbol} right now.` },
+        { label: language === "en" ? `LSTM explanation` : `LSTM açıklaması`, prompt: `Explain why the LSTM neural network has this confidence score.` }
       ];
     }
     return [
-      { label: "What is LSTM?", prompt: "Explain how Long Short-Term Memory (LSTM) neural networks predict stock prices." },
-      { label: "Explain RSI oscillator", prompt: "Explain the Relative Strength Index (RSI) formula and how it detects overbought/oversold levels." },
-      { label: "What is MACD?", prompt: "Explain MACD, the Signal Line, and how moving average crossovers signal trades." }
+      { label: t("whatIsLSTM"), prompt: "Explain how Long Short-Term Memory (LSTM) neural networks predict stock prices." },
+      { label: t("explainRSI"), prompt: "Explain the Relative Strength Index (RSI) formula and how it detects overbought/oversold levels." },
+      { label: t("whatIsMACD"), prompt: "Explain MACD, the Signal Line, and how moving average crossovers signal trades." }
     ];
   };
 
@@ -249,7 +296,7 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
                   <h3 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-1">
                     StockVision AI
                     <Badge variant="outline" className="text-[9px] py-0 px-1 font-mono uppercase bg-primary/5 border-primary/25 text-primary scale-90">
-                      RAG Llama
+                      {t("ragLlama")}
                     </Badge>
                   </h3>
                   <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
@@ -409,39 +456,55 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
             )}
 
             {/* Input Bar */}
-            <div className="p-3 bg-card border-t border-border/30 flex items-center gap-2">
-              <Input
-                dir={isArabic(input) ? "rtl" : "ltr"}
-                disabled={isLoading || !user}
-                placeholder={
-                  !user
-                    ? "Sign in to start chat..."
-                    : activeSymbol
-                    ? `Ask about ${activeSymbol}...`
-                    : "Ask about stocks, LSTM, RSI..."
-                }
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
+            <div className="p-3 bg-card border-t border-border/30 flex flex-col gap-1.5">
+              {user && remaining !== null && (
+                <div className="flex justify-between items-center px-1">
+                  <span className={`text-[10px] font-medium font-mono ${remaining <= 2 ? "text-destructive font-semibold animate-pulse" : "text-muted-foreground/80"}`}>
+                    {t("remainingMessages").replace("{remaining}", remaining.toString()).replace("{limit}", limit.toString())}
+                  </span>
+                  {remaining === 0 && (
+                    <span className="text-[10px] text-destructive font-bold">
+                      {language === "en" ? "Limit Reached" : "Sınıra Ulaşıldı"}
+                    </span>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <Input
+                  dir={isArabic(input) ? "rtl" : "ltr"}
+                  disabled={isLoading || !user || (remaining !== null && remaining <= 0)}
+                  placeholder={
+                    !user
+                      ? t("signInToChat")
+                      : remaining !== null && remaining <= 0
+                      ? t("chatLimitExceeded").replace("{limit}", limit.toString())
+                      : activeSymbol
+                      ? t("askAboutSymbol").replace("{symbol}", activeSymbol)
+                      : t("askAboutStocksDesc")
                   }
-                }}
-                className="text-xs h-9 bg-muted/40 focus-visible:ring-1 focus-visible:ring-primary/60 border-border/80"
-              />
-              <Button
-                disabled={isLoading || !input.trim() || !user}
-                size="icon"
-                onClick={() => handleSend()}
-                className="h-9 w-9 flex-shrink-0"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  className="text-xs h-9 bg-muted/40 focus-visible:ring-1 focus-visible:ring-primary/60 border-border/80"
+                />
+                <Button
+                  disabled={isLoading || !input.trim() || !user || (remaining !== null && remaining <= 0)}
+                  size="icon"
+                  onClick={() => handleSend()}
+                  className="h-9 w-9 flex-shrink-0"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
           </motion.div>
         )}

@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LineChart as LineChartIcon } from "lucide-react";
 import { TIME_RANGES, formatCurrency } from "@/lib/constants";
 import { useTheme } from "@/components/theme-toggle";
+import { translations } from "@/lib/translations";
 
 interface PriceChartProps {
   data: Array<{ date: string; close: number; open: number; high: number; low: number; volume: number }> | null;
@@ -482,7 +483,10 @@ export function PriceChart({
   timeRange,
   onTimeRangeChange,
 }: PriceChartProps) {
-  const { isDark } = useTheme();
+  const { isDark, language } = useTheme();
+  const t = (key: keyof typeof translations.en) => {
+    return translations[language]?.[key] || translations.en[key] || key;
+  };
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 600, height: 450 });
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -513,7 +517,7 @@ export function PriceChart({
     return (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-          <CardTitle className="text-base font-medium">Price Chart</CardTitle>
+          <CardTitle className="text-base font-medium">{t("priceChart")}</CardTitle>
           <div className="flex gap-1">
             {TIME_RANGES.map((r) => (
               <Skeleton key={r.value} className="h-8 w-9" />
@@ -531,12 +535,12 @@ export function PriceChart({
     return (
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium">Price Chart</CardTitle>
+          <CardTitle className="text-base font-medium">{t("priceChart")}</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <div className="h-[450px] flex flex-col items-center justify-center text-center" style={{ backgroundColor: getChartTheme(isDark).bg, borderRadius: 6 }}>
             <LineChartIcon className="h-10 w-10 mb-3" style={{ color: getChartTheme(isDark).axis }} />
-            <p className="text-sm" style={{ color: getChartTheme(isDark).axis }}>Select a stock to view price history</p>
+            <p className="text-sm" style={{ color: getChartTheme(isDark).axis }}>{t("selectStockPriceHistory")}</p>
           </div>
         </CardContent>
       </Card>
@@ -647,7 +651,7 @@ export function PriceChart({
             className="text-xs h-6 px-2.5 py-0 rounded-md font-medium"
             onClick={() => setViewType("candles")}
           >
-            Candles
+            {t("candles")}
           </Button>
           <Button
             variant={viewType === "glow" ? "secondary" : "ghost"}
@@ -655,7 +659,7 @@ export function PriceChart({
             className="text-xs h-6 px-2.5 py-0 rounded-md font-medium"
             onClick={() => setViewType("glow")}
           >
-            Futuristic Glow
+            {t("futuristicGlow")}
           </Button>
         </div>
       </div>

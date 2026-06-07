@@ -291,8 +291,8 @@ async function generateGeminiChatResponse(
   chatHistory: Array<{ role: "user" | "assistant" | "system"; content: string }>,
   systemMessage: string
 ): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const apiKey = process.env.GEMINI_CHAT_KEY; // مفتاح مخصص للشات بوت فقط
+  const model = process.env.GEMINI_CHAT_MODEL || "gemini-3.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const contents: any[] = [];
@@ -318,33 +318,47 @@ async function generateGeminiChatResponse(
     },
     generationConfig: {
       temperature: 0.6,
-      maxOutputTokens: 400
+      maxOutputTokens: 2048
     }
   };
 
-  const response = await httpsRequest(url, JSON.stringify(requestBody));
-  if (response.status < 200 || response.status >= 300) {
-    throw new Error(`Gemini returned status ${response.status}`);
-  }
+  const maxAttempts = 3;
+  let lastError: any = null;
 
-  const contentText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!contentText) {
-    throw new Error("Empty Gemini chat response");
-  }
-
-  return contentText.trim();
-}
-
-export async function generateLLMExplanation(payload: ExplainPayload): Promise<LLMExplanation> {
-  if (process.env.GEMINI_API_KEY) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      console.log(`Generating explanation using Google Gemini API for ${payload.symbol}...`);
-      return await generateGeminiExplanation(payload);
-    } catch (err: any) {
-      console.error("Gemini explanation generation failed, falling back to Ollama:", err.message);
+      const response = await httpsRequest(url, JSON.stringify(requestBody));
+      if (response.status >= 200 && response.status < 300) {
+        const contentText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!contentText) {
+          throw new Error("Empty Gemini chat response");
+        }
+        return contentText.trim();
+      }
+
+      // If status is 503 (Service Unavailable) or 429 (Rate Limit), retry.
+      if (response.status === 503 || response.status === 429) {
+        throw new Error(`Gemini returned transient status ${response.status}`);
+      } else {
+        // Fail immediately for other statuses
+        throw new Error(`Gemini returned status ${response.status}`);
+      }
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`Gemini API call attempt ${attempt} failed: ${error.message}`);
+      if (attempt < maxAttempts) {
+        const delay = 1500 * attempt; // 1.5s, then 3.0s
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
     }
   }
 
+  throw lastError || new Error("Failed to get response from Gemini");
+}
+
+export async function generateLLMExplanation(payload: ExplainPayload): Promise<LLMExplanation> {
+  // LLM Explainer يستخدم Ollama المحلي دائماً (LLaMA)
+  // الشات بوت هو اللي يستخدم Gemini API عبر GEMINI_CHAT_KEY
   const requestBody = {
     model: OLLAMA_MODEL,
     stream: false,
@@ -391,18 +405,7 @@ export async function generateLLMExplanation(payload: ExplainPayload): Promise<L
 export async function generateAIChatResponse(
   userMessage: string,
   chatHistory: Array<{ role: "user" | "assistant" | "system"; content: string }>,
-  stockContext?: {
-    symbol: string;
-    price: number;
-    change: number;
-    changePercent: number;
-    prediction?: {
-      direction: string;
-      confidence: number;
-      targetDate: string;
-    } | null;
-    recentNews?: Array<{ title: string; sentiment?: string }> | null;
-  }
+  stockContext?: any
 ): Promise<string> {
   const academicGlossary = `
 Academic Reference Glossary (for explaining financial concepts scientifically):
@@ -422,7 +425,7 @@ Core Directives:
 1. ALWAYS match the language of the user's message.
    - If the user types in English, you MUST reply entirely in English.
    - If the user types in Arabic, you MUST reply entirely in Arabic.
-2. Keep your answers brief, mathematically oriented, and to the point.
+2. Provide natural, professional, and well-structured financial answers. Use bullet points or tables where appropriate to make data highly readable.
 
 Use the following academic glossary for explanations:
 ${academicGlossary}
@@ -448,25 +451,32 @@ CRITICAL TRANSLATION RULES FOR ARABIC:
 `;
 
   if (stockContext) {
-    systemMessage += `\n\nContext for current stock query:
+    if (stockContext.isGeneralMarket) {
+      systemMessage += `\n\nGeneral Market Context (LSTM Predictions and News Sentiments for active stocks in database):
+${stockContext.summary}
+
+Use this general market context to answer general questions (e.g., comparing stocks, listing the most positive/negative stocks, or giving a market overview). If the user asks about the "most positive" stocks, look for stocks with "LSTM prediction direction: UP" and high confidence.
+`;
+    } else {
+      systemMessage += `\n\nContext for current stock query:
 Symbol: ${stockContext.symbol}
 Current Price: $${stockContext.price} (Change: ${stockContext.change >= 0 ? "+" : ""}${stockContext.change.toFixed(2)}, Percent: ${stockContext.changePercent >= 0 ? "+" : ""}${stockContext.changePercent.toFixed(2)}%)
 `;
-    if (stockContext.prediction) {
-      systemMessage += `LSTM Neural Network Prediction: ${stockContext.prediction.direction.toUpperCase()} with ${(stockContext.prediction.confidence * 100).toFixed(1)}% confidence targeting ${stockContext.prediction.targetDate}.\n`;
-    }
-    if (stockContext.recentNews && stockContext.recentNews.length > 0) {
-      systemMessage += `Recent News Headlines & Sentiments:\n` + stockContext.recentNews.map(n => `- ${n.title} (Sentiment: ${n.sentiment || "Neutral"})`).join("\n") + "\n";
+      if (stockContext.prediction) {
+        systemMessage += `LSTM Neural Network Prediction: ${stockContext.prediction.direction.toUpperCase()} with ${(stockContext.prediction.confidence * 100).toFixed(1)}% confidence targeting ${stockContext.prediction.targetDate}.\n`;
+      }
+      if (stockContext.recentNews && stockContext.recentNews.length > 0) {
+        systemMessage += `Recent News Headlines & Sentiments:\n` + stockContext.recentNews.map((n: any) => `- ${n.title} (Sentiment: ${n.sentiment || "Neutral"}${n.sentimentScore !== undefined ? `, Score: ` + (n.sentimentScore * 100).toFixed(0) + `%` : ""})`).join("\n") + "\n";
+      }
     }
   }
 
-  if (process.env.GEMINI_API_KEY) {
-    try {
-      return await generateGeminiChatResponse(userMessage, chatHistory, systemMessage);
-    } catch (err: any) {
-      console.error("Gemini chat response failed, falling back to Ollama:", err.message);
-    }
+  // الشات بوت يستخدم Gemini API حصراً عبر GEMINI_CHAT_KEY
+  const geminiChatKey = process.env.GEMINI_CHAT_KEY;
+  if (!geminiChatKey) {
+    throw new Error("GEMINI_CHAT_KEY is not set. Please add it to your .env file to enable the chatbot.");
   }
+  return await generateGeminiChatResponse(userMessage, chatHistory, systemMessage);
 
   const messages = [
     { role: "system", content: systemMessage },

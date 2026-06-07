@@ -217,6 +217,63 @@ docker exec -i market_scholar_db psql -U market_user -d market_scholar -c "ALTER
 ```
 
 
+## 🎨 تخصيص إعدادات الموقع وترتيب الواجهة (Language & Theme Placement)
 
+تمت إعادة هيكلة وترتيب خيارات التخصيص داخل نافذة الإعدادات (`Settings Dialog`) استجابةً لطلب المستخدم لوضع خيارات اختيار اللغة بشكل مباشر أسفل خيار نمط المظهر (الوضع الداكن/الفاتح).
+
+### التغييرات والملفات المعدلة:
+* **الملف المعدل:** [settings-dialog.tsx](file:///c:/Users/emada/Market-Scholar/client/src/components/settings-dialog.tsx)
+  * إعادة ترتيب الأقسام وتعديل واجهة المستخدم لوضع خيار اختيار اللغة (`Language`) مباشرة تحت خيار المود (`Appearance/Mode`) وبقائهما فوق خيار سمة اللون (`Accent Color`).
+
+### 📸 لقطة شاشة توضح الترتيب الجديد للإعدادات:
+![Settings Dialog Layout](C:/Users/emada/.gemini/antigravity-ide/brain/ac180c77-b4a7-48fc-98df-ebdaca8a8bfb/settings_dialog_1780693419679.png)
+
+
+## 🤖 محدد رسائل الشات بوت اليومي وحل مشكلة انقطاع الإجابات (Daily Chat Limit & Response Truncation Fix)
+
+تم تصميم وتطبيق نظام متكامل لتقييد استخدام الشات بوت بالتعاون مع قاعدة البيانات والواجهة الأمامية وتفادي انقطاع ردود الذكاء الاصطناعي:
+
+### 1. محدد الرسائل اليومية (10 رسائل ناجحة):
+* **الملف المعدل:** [schema.ts](file:///c:/Users/emada/Market-Scholar/shared/schema.ts#L12-L13)
+  - إضافة حقول `chat_count` و `last_chat_date` لجدول المستخدمين لتتبع الاستخدام الفعلي.
+* **الملف المعدل:** [storage.ts](file:///c:/Users/emada/Market-Scholar/server/storage.ts#L115)
+  - إضافة دالة `updateUserChatLimit` لتحديث العداد في قاعدة البيانات عند استهلاك الحصص.
+* **الملف المعدل:** [routes.ts](file:///c:/Users/emada/Market-Scholar/server/routes.ts#L247-L361)
+  - إضافة مسار `/api/ai/chat-limit` للتحقق من المتبقي.
+  - تعديل مسار الشات بوت `/api/ai/chat` ليقوم بخصم الرسالة **فقط في حال كان رد الموديل ناجحاً** وبدون احتساب الرسائل الفاشلة أو التي تنتهي بأخطاء.
+* **الملف المعدل:** [translations.ts](file:///c:/Users/emada/Market-Scholar/client/src/lib/translations.ts#L251) و [ai-chat-assistant.tsx](file:///c:/Users/emada/Market-Scholar/client/src/components/ai-chat-assistant.tsx#L58)
+  - عرض الحصة المتبقية (مثال: `Remaining messages: 10/10`) فوق حقل الكتابة بشكل أنيق.
+  - تعطيل حقل الإدخال وزر الإرسال بالكامل عند استهلاك الحصة اليومية بالكامل، وعرض تنبيه منبثق (Toast Warning) باللغة المختارة (العربية أو التركية أو الإنجليزية).
+
+### 2. حل مشكلة انقطاع ردود الشات بوت (Gemini Response Truncation):
+* **الملف المعدل:** [llm-explainer.ts](file:///c:/Users/emada/Market-Scholar/server/llm-explainer.ts#L321)
+  - **المشكلة:** كان هناك حد أقصى للرموز الصادرة `maxOutputTokens: 400` والذي يمثل حوالي 80-100 كلمة فقط باللغة العربية، مما يسبب انقطاع الردود في منتصف الجملة.
+  - **الحل:** زيادة الحد الأقصى للرموز الصادرة `maxOutputTokens` من `400` إلى **`2048`** لتمكين الموديل (Gemini-3.5-Flash) من إكمال إجاباته وشرحها بشكل مفصل، واستعراض الجداول والنقاط الأكاديمية والتحليلية دون قيود.
+
+
+## 🔐 نظام استعادة وتحديث كلمة المرور (Forgot & Reset Password Workflow with Resend)
+
+تم تصميم وبرمجة دورة كاملة ومؤمنة لاسترجاع وتحديث حسابات المستخدمين في حال نسيان كلمة المرور:
+
+### 1. الإجراءات البرمجية وقاعدة البيانات:
+* **الملف المعدل:** [schema.ts](file:///c:/Users/emada/Market-Scholar/shared/schema.ts#L13-L14)
+  - إضافة حقول `reset_password_token` و `reset_password_expires` لجدول المستخدمين.
+* **الملف المعدل:** [storage.ts](file:///c:/Users/emada/Market-Scholar/server/storage.ts#L121-L142)
+  - تفعيل دوال البحث عن مستخدم بالبريد الإلكتروني وتحديث الرموز وكلمة المرور وتصفير التوكن بعد الاستخدام.
+* **الملف المعدل:** [routes.ts](file:///c:/Users/emada/Market-Scholar/server/routes.ts#L363-L475)
+  - إنشاء مسار `POST /api/forgot-password` لتوليد التوكن وإرساله بالايميل وتخزينه.
+  - إنشاء مسار `POST /api/reset-password` لمقارنة التوكن والتأكد من الصلاحية (ساعة واحدة) وتحديث كلمة المرور مشفرة بـ `scrypt`.
+
+### 2. دمج خدمة البريد الإلكتروني Resend:
+- استخدام مكتبة **Resend** الرسمية لإرسال إيميلات HTML احترافية تحتوي على زر إعادة التعيين ورابط آمن.
+- **وضع المحاكاة المدمج (Simulation Mode)**: في حال عدم إدخال مفتاح API لـ Resend، يقوم السيرفر بطباعة الرابط في الـ logs وإرجاعه مباشرة في الـ Response للتمكن من تجربته وفحصه فوراً وبسهولة.
+
+### 3. شاشات الواجهة الأمامية والتحقق:
+* **الملف المعدل:** [auth-page.tsx](file:///c:/Users/emada/Market-Scholar/client/src/pages/auth-page.tsx#L44-L97)
+  - إضافة زر "Forgot Password?" يفتح نافذة منبثقة لإدخال البريد، مع التعامل الذكي وعرض رابط المحاكاة مباشرة للمراجعين لتسهيل الاختبار دون الحاجة لتفقد خوادم البريد.
+* **الملف الجديد:** [reset-password.tsx](file:///c:/Users/emada/Market-Scholar/client/src/pages/reset-password.tsx)
+  - صفحة عصرية بالكامل لقراءة التوكن وعرض نموذج إدخال كلمة مرور جديدة مع مدقق تفاعلي حي لشروط قوة كلمة المرور وتطابق الحقلين.
+* **الملف المعدل:** [App.tsx](file:///c:/Users/emada/Market-Scholar/client/src/App.tsx#L30)
+  - تسجيل مسار `/reset-password` في الـ Router.
 
 

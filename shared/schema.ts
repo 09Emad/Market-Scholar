@@ -9,6 +9,10 @@ export const users = pgTable("users", {
   password: text("password"), // Nullable for Google OAuth users
   googleId: text("google_id").unique(),
   email: text("email"),
+  chatCount: integer("chat_count").default(0).notNull(),
+  lastChatDate: text("last_chat_date"),
+  resetPasswordToken: text("reset_password_token"),
+  resetPasswordExpires: timestamp("reset_password_expires"),
 });
 
 export const predictions = pgTable("predictions", {

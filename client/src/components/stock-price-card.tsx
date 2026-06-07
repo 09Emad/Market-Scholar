@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Activity, BarChart3, DollarSign, Layers } from "lucide-react";
 import { formatCurrency, formatLargeNumber, formatPercent } from "@/lib/constants";
 import type { StockQuote } from "@shared/schema";
+import { useTheme } from "@/components/theme-toggle";
+import { translations } from "@/lib/translations";
 
 interface StockPriceCardProps {
   quote: StockQuote | null;
@@ -11,6 +13,10 @@ interface StockPriceCardProps {
 }
 
 export function StockPriceCard({ quote, isLoading }: StockPriceCardProps) {
+  const { language } = useTheme();
+  const t = (key: keyof typeof translations.en) => {
+    return translations[language]?.[key] || translations.en[key] || key;
+  };
   if (isLoading) {
     return <StockPriceCardSkeleton />;
   }
@@ -22,7 +28,7 @@ export function StockPriceCard({ quote, isLoading }: StockPriceCardProps) {
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Activity className="h-10 w-10 text-muted-foreground mb-3" />
             <p className="text-sm text-muted-foreground">
-              Search for a stock symbol to view price data
+              {t("selectStockSymbol")}
             </p>
           </div>
         </CardContent>
@@ -83,38 +89,38 @@ export function StockPriceCard({ quote, isLoading }: StockPriceCardProps) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <MetricItem
             icon={<DollarSign className="h-3.5 w-3.5" />}
-            label="Open"
+            label={t("open")}
             value={formatCurrency(quote.open)}
             testId="text-open-price"
           />
           <MetricItem
             icon={<TrendingUp className="h-3.5 w-3.5" />}
-            label="High"
+            label={t("high")}
             value={formatCurrency(quote.high)}
             testId="text-high-price"
           />
           <MetricItem
             icon={<TrendingDown className="h-3.5 w-3.5" />}
-            label="Low"
+            label={t("low")}
             value={formatCurrency(quote.low)}
             testId="text-low-price"
           />
           <MetricItem
             icon={<BarChart3 className="h-3.5 w-3.5" />}
-            label="Volume"
+            label={t("volume")}
             value={formatLargeNumber(quote.volume)}
             testId="text-volume"
           />
           <MetricItem
             icon={<Layers className="h-3.5 w-3.5" />}
-            label="Prev. Close"
+            label={t("prevClose")}
             value={formatCurrency(quote.previousClose)}
             testId="text-prev-close"
           />
           {quote.week52High !== undefined && (
             <MetricItem
               icon={<TrendingUp className="h-3.5 w-3.5" />}
-              label="52W High"
+              label={t("week52High")}
               value={formatCurrency(quote.week52High)}
               testId="text-52w-high"
             />
@@ -122,7 +128,7 @@ export function StockPriceCard({ quote, isLoading }: StockPriceCardProps) {
           {quote.week52Low !== undefined && (
             <MetricItem
               icon={<TrendingDown className="h-3.5 w-3.5" />}
-              label="52W Low"
+              label={t("week52Low")}
               value={formatCurrency(quote.week52Low)}
               testId="text-52w-low"
             />
@@ -130,7 +136,7 @@ export function StockPriceCard({ quote, isLoading }: StockPriceCardProps) {
           {quote.marketCap !== undefined && (
             <MetricItem
               icon={<DollarSign className="h-3.5 w-3.5" />}
-              label="Market Cap"
+              label={t("marketCap")}
               value={formatLargeNumber(quote.marketCap)}
               testId="text-market-cap"
             />
