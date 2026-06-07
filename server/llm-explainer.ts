@@ -318,7 +318,7 @@ async function generateGeminiChatResponse(
     },
     generationConfig: {
       temperature: 0.6,
-      maxOutputTokens: 400
+      maxOutputTokens: 2048
     }
   };
 

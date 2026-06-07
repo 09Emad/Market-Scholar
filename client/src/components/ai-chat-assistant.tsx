@@ -52,9 +52,32 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [limit, setLimit] = useState<number>(10);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Fetch chat limit status
+  const fetchChatLimit = async () => {
+    if (!user) return;
+    try {
+      const response = await fetch("/api/ai/chat-limit");
+      if (response.ok) {
+        const data = await response.json();
+        setRemaining(data.remaining);
+        setLimit(data.limit);
+      }
+    } catch (error) {
+      console.error("Failed to fetch chat limit status:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (user && isOpen) {
+      fetchChatLimit();
+    }
+  }, [user, isOpen]);
 
   // Load chat history from localStorage on mount
   useEffect(() => {
@@ -127,6 +150,15 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
       return;
     }
 
+    if (remaining !== null && remaining <= 0) {
+      toast({
+        title: language === "en" ? "Limit Exceeded" : "Limit Aşıldı",
+        description: t("chatLimitExceeded").replace("{limit}", limit.toString()),
+        variant: "destructive",
+      });
+      return;
+    }
+
     const userMsg: Message = {
       id: Math.random().toString(36).substring(7),
       role: "user",
@@ -156,6 +188,11 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
       
       const data = await response.json();
       
+      // Update remaining count on success
+      if (data && typeof data.remainingMessages === "number") {
+        setRemaining(data.remainingMessages);
+      }
+
       const assistantMsg: Message = {
         id: Math.random().toString(36).substring(7),
         role: "assistant",
@@ -166,10 +203,14 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error: any) {
       console.error("Failed to fetch chat response:", error);
+      fetchChatLimit();
+
       const errorMsg: Message = {
         id: Math.random().toString(36).substring(7),
         role: "assistant",
-        content: t("errorLocalLLM"),
+        content: error.message?.includes("LIMIT_EXCEEDED")
+          ? t("chatLimitExceeded").replace("{limit}", limit.toString())
+          : t("errorLocalLLM"),
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -415,39 +456,55 @@ export function AIChatAssistant({ activeSymbol }: AIChatAssistantProps) {
             )}
 
             {/* Input Bar */}
-            <div className="p-3 bg-card border-t border-border/30 flex items-center gap-2">
-              <Input
-                dir={isArabic(input) ? "rtl" : "ltr"}
-                disabled={isLoading || !user}
-                placeholder={
-                  !user
-                    ? "Sign in to start chat..."
-                    : activeSymbol
-                    ? `Ask about ${activeSymbol}...`
-                    : "Ask about stocks, LSTM, RSI..."
-                }
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
+            <div className="p-3 bg-card border-t border-border/30 flex flex-col gap-1.5">
+              {user && remaining !== null && (
+                <div className="flex justify-between items-center px-1">
+                  <span className={`text-[10px] font-medium font-mono ${remaining <= 2 ? "text-destructive font-semibold animate-pulse" : "text-muted-foreground/80"}`}>
+                    {t("remainingMessages").replace("{remaining}", remaining.toString()).replace("{limit}", limit.toString())}
+                  </span>
+                  {remaining === 0 && (
+                    <span className="text-[10px] text-destructive font-bold">
+                      {language === "en" ? "Limit Reached" : "Sınıra Ulaşıldı"}
+                    </span>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <Input
+                  dir={isArabic(input) ? "rtl" : "ltr"}
+                  disabled={isLoading || !user || (remaining !== null && remaining <= 0)}
+                  placeholder={
+                    !user
+                      ? t("signInToChat")
+                      : remaining !== null && remaining <= 0
+                      ? t("chatLimitExceeded").replace("{limit}", limit.toString())
+                      : activeSymbol
+                      ? t("askAboutSymbol").replace("{symbol}", activeSymbol)
+                      : t("askAboutStocksDesc")
                   }
-                }}
-                className="text-xs h-9 bg-muted/40 focus-visible:ring-1 focus-visible:ring-primary/60 border-border/80"
-              />
-              <Button
-                disabled={isLoading || !input.trim() || !user}
-                size="icon"
-                onClick={() => handleSend()}
-                className="h-9 w-9 flex-shrink-0"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  className="text-xs h-9 bg-muted/40 focus-visible:ring-1 focus-visible:ring-primary/60 border-border/80"
+                />
+                <Button
+                  disabled={isLoading || !input.trim() || !user || (remaining !== null && remaining <= 0)}
+                  size="icon"
+                  onClick={() => handleSend()}
+                  className="h-9 w-9 flex-shrink-0"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
           </motion.div>
         )}

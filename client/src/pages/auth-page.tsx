@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/components/theme-toggle";
@@ -43,6 +44,55 @@ export default function AuthPage() {
   const { language } = useTheme();
   const t = (key: keyof typeof translations.en) => {
     return translations[language]?.[key] || translations.en[key] || key;
+  };
+
+  const [isForgotOpen, setIsForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [isForgotLoading, setIsForgotLoading] = useState(false);
+  const [forgotSimulatedLink, setForgotSimulatedLink] = useState<string | null>(null);
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) return;
+
+    setIsForgotLoading(true);
+    setForgotSimulatedLink(null);
+
+    try {
+      const response = await fetch("/api/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail.trim() }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        toast({
+          title: language === "en" ? "Reset Link Sent" : "تم إرسال رابط إعادة التعيين",
+          description: t("resetLinkSent"),
+        });
+        if (data.simulated && data.link) {
+          setForgotSimulatedLink(data.link);
+        } else {
+          setIsForgotOpen(false);
+          setForgotEmail("");
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: data.message || "Failed to process forgot password",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to process forgot password",
+        variant: "destructive",
+      });
+    } finally {
+      setIsForgotLoading(false);
+    }
   };
 
   const { data: googleConfig } = useQuery<{ configured: boolean }>({
@@ -330,6 +380,21 @@ export default function AuthPage() {
                         )}
                       />
 
+                      {/* Forgot Password Link */}
+                      <div className="flex justify-end mt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForgotSimulatedLink(null);
+                            setForgotEmail("");
+                            setIsForgotOpen(true);
+                          }}
+                          className="text-xs font-semibold text-primary hover:underline hover:text-primary/90 transition-colors"
+                        >
+                          {t("forgotPassword")}
+                        </button>
+                      </div>
+
                       <Button
                         type="submit"
                         className="w-full mt-6 font-bold text-sm h-11 bg-primary hover:bg-primary/95 text-primary-foreground shadow-md shadow-primary/10 rounded-xl transition-all duration-200 active:scale-[0.98]"
@@ -520,6 +585,79 @@ export default function AuthPage() {
             StockVision Platform • Open-Source Research • Academic Graduation Thesis
           </div>
         </div>
+
+        {/* Forgot Password Dialog */}
+        <Dialog open={isForgotOpen} onOpenChange={setIsForgotOpen}>
+          <DialogContent className="max-w-md bg-card/90 backdrop-blur-xl border border-border/40 shadow-2xl rounded-2xl p-6 selection:bg-primary/20">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                <Brain className="h-5 w-5 text-primary animate-pulse" />
+                {t("forgotPassword")}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                {language === "en" 
+                  ? "Enter your email address and we will generate a secure reset link for your account." 
+                  : "أدخل بريدك الإلكتروني وسنقوم بتوليد رابط آمن لإعادة تعيين كلمة مرور حسابك."}
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleForgotSubmit} className="space-y-4 mt-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground">{t("emailAddress")}</label>
+                <Input
+                  type="email"
+                  required
+                  placeholder="name@example.com"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  className="bg-background/50 border-border/60 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all rounded-xl text-xs"
+                />
+              </div>
+
+              {forgotSimulatedLink && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-[11px] font-mono rounded-xl p-3 space-y-2 mt-2">
+                  <div className="font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-ping" />
+                    [SIMULATION MODE ACTIVE]
+                  </div>
+                  <div className="text-slate-300 leading-relaxed word-break-all select-all">
+                    Reset Link: <a href={forgotSimulatedLink} className="underline text-yellow-400">{forgotSimulatedLink}</a>
+                  </div>
+                  <div className="text-slate-400 text-[9px]">
+                    {language === "en" 
+                      ? "Click the link above to test password reset directly." 
+                      : "انقر على الرابط أعلاه لتجربة إعادة تعيين كلمة المرور مباشرة."}
+                  </div>
+                </div>
+              )}
+
+              <DialogFooter className="flex gap-2 sm:gap-0 mt-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setIsForgotOpen(false)}
+                  className="rounded-xl text-xs"
+                >
+                  {language === "en" ? "Cancel" : "إلغاء"}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isForgotLoading}
+                  className="bg-primary hover:bg-primary/95 text-primary-foreground rounded-xl text-xs font-bold px-4"
+                >
+                  {isForgotLoading ? (
+                    <span className="flex items-center gap-1">
+                      <Activity className="h-3 w-3 animate-spin" />
+                      {language === "en" ? "Sending..." : "جاري الإرسال..."}
+                    </span>
+                  ) : (
+                    t("sendResetLink")
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Right Column: AI Deep Learning Showcase (Visible on Large Screens) */}

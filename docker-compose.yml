@@ -35,6 +35,7 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GEMINI_CHAT_KEY=${GEMINI_CHAT_KEY}
+      - RESEND_API_KEY=${RESEND_API_KEY}
     depends_on:
       - db
     extra_hosts:
