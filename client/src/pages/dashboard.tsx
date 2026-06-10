@@ -25,7 +25,7 @@ import type { StockQuote, NewsArticle, PredictionResult, Prediction } from "@sha
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useTheme } from "@/components/theme-toggle";
-import { LogOut, Sun, Moon, Settings } from "lucide-react";
+import { LogOut, Sun, Moon, Settings, X } from "lucide-react";
 import { translations } from "@/lib/translations";
 import { SettingsDialog } from "@/components/settings-dialog";
 import {
@@ -250,8 +250,15 @@ useEffect(() => {
 
         {selectedSymbol && (
           <div className="flex items-center gap-2 mb-4 flex-wrap">
-            <Badge variant="default" className="font-mono text-sm px-3 py-1">
+            <Badge variant="default" className="font-mono text-sm px-3 py-1 flex items-center gap-1">
               {selectedSymbol}
+              <button
+                onClick={() => setSelectedSymbol("")}
+                className="ml-1 hover:bg-primary-foreground/20 rounded-full p-0.5 outline-none transition-colors"
+                aria-label="Clear selection"
+              >
+                <X className="h-3 w-3" />
+              </button>
             </Badge>
             {stockQuery.data && (
               <span className="text-sm text-muted-foreground">
