@@ -95,6 +95,7 @@ export function FeatureImportance({ prediction, isLoading }: FeatureImportancePr
                 width={100}
               />
               <Tooltip
+                cursor={{ fill: 'transparent' }}
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   return (

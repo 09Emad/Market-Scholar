@@ -66,6 +66,7 @@ function generateMockHistory(symbol: string, range: string) {
     "3m": { days: 90, intervalMinutes: 1440 },
     "6m": { days: 180, intervalMinutes: 1440 },
     "1y": { days: 260, intervalMinutes: 1440 },
+    "3y": { days: 780, intervalMinutes: 1440 },
   };
 
   const config = rangeMap[range] || rangeMap["1m"];
@@ -224,6 +225,7 @@ export async function getStockHistory(
     "3m": { range: "3mo", interval: "1d" },
     "6m": { range: "6mo", interval: "1d" },
     "1y": { range: "1y", interval: "1d" },
+    "3y": { range: "3y", interval: "1d" },
   };
 
   const config = rangeMap[range] || rangeMap["1m"];

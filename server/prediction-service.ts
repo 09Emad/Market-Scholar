@@ -123,7 +123,7 @@ export async function analyzeSentiment(articles: NewsArticle[]): Promise<NewsArt
 
 export async function generatePrediction(symbol: string): Promise<PredictionResult> {
   const [historyData, newsArticles] = await Promise.all([
-    getStockHistory(symbol, "1y"),
+    getStockHistory(symbol, "3y"),
     getStockNews(symbol),
   ]);
 
