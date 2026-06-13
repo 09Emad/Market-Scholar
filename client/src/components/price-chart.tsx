@@ -509,7 +509,7 @@ export function PriceChart({
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [isLoading, data]);
 
   const chartHeight = showRSI ? 540 : 450;
 
