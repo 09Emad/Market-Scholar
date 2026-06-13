@@ -120,6 +120,8 @@ export const translations = {
     precision: "Precision",
     recall: "Recall",
     f1Score: "F1-Score",
+    technicalAccuracy: "Technical Indicators Accuracy (LSTM)",
+    sentimentAccuracy: "News Sentiment Accuracy (VADER)",
 
     // Feature Importance
     featureImportanceAppearsAfter: "Feature importance appears after prediction",
@@ -380,6 +382,8 @@ export const translations = {
     precision: "Hassasiyet",
     recall: "Geri Çağırma (Recall)",
     f1Score: "F1 Skoru",
+    technicalAccuracy: "Teknik Göstergeler Doğruluğu (LSTM)",
+    sentimentAccuracy: "Haber Duyarlılığı Doğruluğu (VADER)",
 
     // Feature Importance
     featureImportanceAppearsAfter: "Özellik önemi tahmin oluşturulduktan sonra görünür",

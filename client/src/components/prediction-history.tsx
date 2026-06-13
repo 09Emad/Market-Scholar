@@ -401,6 +401,36 @@ export function PredictionHistory({ predictions, isLoading, isAuthenticated }: P
     ? (correctPredictions / validatedCount) * 100
     : 0;
 
+  // Helper to extract technical and sentiment scores safely
+  const getScores = (p: Prediction) => {
+    let tech: number | undefined;
+    let sent: number | undefined;
+    if (p.factors && typeof p.factors === "object") {
+      const f = p.factors as any;
+      tech = typeof f.technicalScore === "number" ? f.technicalScore : undefined;
+      sent = typeof f.sentimentScore === "number" ? f.sentimentScore : undefined;
+    }
+    return { tech, sent };
+  };
+
+  const validated = predictions.filter((p) => p.wasCorrect === 1 || p.wasCorrect === 0);
+
+  // Technical Indicators Accuracy calculation
+  const techPreds = validated.filter((p) => {
+    const { tech } = getScores(p);
+    return tech !== undefined && (tech > 0.52 || tech < 0.48);
+  });
+  const techCorrect = techPreds.filter((p) => p.wasCorrect === 1).length;
+  const techAccuracy = techPreds.length > 0 ? (techCorrect / techPreds.length) * 100 : 0;
+
+  // Sentiment Indicators Accuracy calculation
+  const sentPreds = validated.filter((p) => {
+    const { sent } = getScores(p);
+    return sent !== undefined && (sent > 0.52 || sent < 0.48);
+  });
+  const sentCorrect = sentPreds.filter((p) => p.wasCorrect === 1).length;
+  const sentAccuracy = sentPreds.length > 0 ? (sentCorrect / sentPreds.length) * 100 : 0;
+
   // Filter logic
   const filteredPredictions = predictions.filter((p) => {
     const matchesSearch = searchQuery === "" || p.symbol.toUpperCase().includes(searchQuery.toUpperCase().trim());
@@ -454,6 +484,64 @@ export function PredictionHistory({ predictions, isLoading, isAuthenticated }: P
             <p className="text-xs text-muted-foreground">{t("accuracy")}</p>
           </div>
         </div>
+
+        {/* Indicators vs Sentiment Accuracy Split */}
+        {validatedCount > 0 && (
+          <div className="p-3 mb-4 rounded-xl border bg-muted/20 space-y-3">
+            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+              {language === "en" ? "Analysis Signal Accuracy Breakdown" : "Analiz Sinyali Doğruluk Dağılımı"}
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Technical indicators */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="flex items-center gap-1.5 font-medium text-foreground">
+                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-sm shadow-indigo-500/50" />
+                    {t("technicalAccuracy")}
+                  </span>
+                  <span className="font-mono font-bold text-indigo-400">
+                    {techPreds.length > 0 ? `${techAccuracy.toFixed(1)}%` : "N/A"}
+                  </span>
+                </div>
+                <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-indigo-500 rounded-full transition-all duration-500" 
+                    style={{ width: `${techPreds.length > 0 ? techAccuracy : 0}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground font-mono">
+                  {language === "en" 
+                    ? `Based on ${techPreds.length} high-confidence technical signals` 
+                    : `${techPreds.length} yüksek güvenli teknik sinyal üzerinden`}
+                </p>
+              </div>
+
+              {/* News sentiment */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="flex items-center gap-1.5 font-medium text-foreground">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
+                    {t("sentimentAccuracy")}
+                  </span>
+                  <span className="font-mono font-bold text-emerald-400">
+                    {sentPreds.length > 0 ? `${sentAccuracy.toFixed(1)}%` : "N/A"}
+                  </span>
+                </div>
+                <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
+                    style={{ width: `${sentPreds.length > 0 ? sentAccuracy : 0}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground font-mono">
+                  {language === "en" 
+                    ? `Based on ${sentPreds.length} strong sentiment/news signals` 
+                    : `${sentPreds.length} güçlü haber duyarlılık sinyali üzerinden`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Search & Filter Bar */}
         <div className="flex flex-col gap-2 mb-3">
