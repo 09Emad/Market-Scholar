@@ -91,6 +91,26 @@ export async function registerRoutes(
     next();
   };
 
+  const requireAdmin = (req: any, res: any, next: any) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ message: "Forbidden: Admins only" });
+    }
+    next();
+  };
+
+  app.get("/api/admin/stats", requireAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getAdminStats();
+      const recentActivity = await storage.getRecentActivity(15);
+      res.json({ stats, recentActivity });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to fetch admin stats" });
+    }
+  });
+
   // --- مسارات الأسهم (Stock Routes) ---
   app.get("/api/stock/quote/:symbol", async (req, res) => {
     try {

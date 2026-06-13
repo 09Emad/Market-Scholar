@@ -108,11 +108,13 @@ export function setupAuth(app: Express) {
                 username = `${username}_${Math.floor(1000 + Math.random() * 9000)}`;
               }
 
+              const isAdmin = username.toLowerCase() === (process.env.ADMIN_USERNAME || "").toLowerCase();
               user = await storage.createUser({
                 username,
                 password: null, // No password for Google OAuth users
                 googleId,
                 email,
+                isAdmin,
               });
             }
             return done(null, user);
@@ -160,9 +162,11 @@ export function setupAuth(app: Express) {
       }
 
       const hashedPassword = await hashPassword(password);
+      const isAdmin = username.toLowerCase() === (process.env.ADMIN_USERNAME || "").toLowerCase();
       const user = await storage.createUser({
         username,
         password: hashedPassword,
+        isAdmin,
       });
 
       await storage.createAuthLog({

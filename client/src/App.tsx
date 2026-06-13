@@ -10,6 +10,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import AuthPage from "@/pages/auth-page";
 import ResetPasswordPage from "@/pages/reset-password";
+import AdminDashboard from "@/pages/admin-dashboard";
 import { SplashScreen } from "@/components/splash-screen";
 
 function Redirect({ to }: { to: string }) {
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/auth">
         {user ? <Redirect to="/" /> : <AuthPage />}
       </Route>
+      <Route path="/admin" component={AdminDashboard} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route component={NotFound} />
     </Switch>

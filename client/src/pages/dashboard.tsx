@@ -191,6 +191,16 @@ useEffect(() => {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                    {user.isAdmin && (
+                      <>
+                        <DropdownMenuItem onClick={() => setLocation("/admin")} className="cursor-pointer flex items-center justify-between py-2.5 px-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-400 dark:to-purple-400">Admin Dashboard 👑</span>
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
                     <DropdownMenuItem onClick={() => setIsSettingsOpen(true)} className="cursor-pointer flex items-center justify-between py-2.5 px-3">
                       <div className="flex items-center gap-2">
                         <Settings className="h-4 w-4 text-primary" />
