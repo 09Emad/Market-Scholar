@@ -140,9 +140,8 @@ export function PriceChart({
   useEffect(() => {
     if (chartData.length === 0 || !chartContainerRef.current) return;
 
-    const cardEl = chartContainerRef.current?.closest(".shadcn-card");
-    const computedBg = cardEl ? window.getComputedStyle(cardEl).backgroundColor : (isDark ? "#0c1424" : "#ffffff");
-    const computedBorder = cardEl ? window.getComputedStyle(cardEl).borderColor : (isDark ? "#27272a" : "#e4e4e7");
+    const computedBg = isDark ? "#0b111e" : "#edf0f5";
+    const computedBorder = isDark ? "#131825" : "#dfe2e7";
 
     const themeColors = {
       bg: computedBg,
