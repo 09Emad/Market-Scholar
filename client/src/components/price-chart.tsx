@@ -413,7 +413,7 @@ export function PriceChart({
         <CardContent className="p-4 pt-0">
           <div
             className="h-[450px] flex flex-col items-center justify-center text-center rounded-lg"
-            style={{ backgroundColor: isDark ? "#09090b" : "#ffffff" }}
+            style={{ backgroundColor: isDark ? "#0b111e" : "#edf0f5" }}
           >
             <LineChartIcon className="h-10 w-10 mb-3 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">{t("selectStockPriceHistory")}</p>

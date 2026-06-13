@@ -47,7 +47,7 @@ export default function Dashboard() {
     return translations[language]?.[key] || translations.en[key] || key;
   };
   const [selectedSymbol, setSelectedSymbol] = useState<string>("");
-  const [timeRange, setTimeRange] = useState("1m");
+  const [timeRange, setTimeRange] = useState("1d");
   const [activeTab, setActiveTab] = useState("overview");
   const { toast } = useToast();
 
