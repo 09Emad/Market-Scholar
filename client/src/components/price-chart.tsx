@@ -140,11 +140,15 @@ export function PriceChart({
   useEffect(() => {
     if (chartData.length === 0 || !chartContainerRef.current) return;
 
+    const cardEl = chartContainerRef.current?.closest(".shadcn-card");
+    const computedBg = cardEl ? window.getComputedStyle(cardEl).backgroundColor : (isDark ? "#0c1424" : "#ffffff");
+    const computedBorder = cardEl ? window.getComputedStyle(cardEl).borderColor : (isDark ? "#27272a" : "#e4e4e7");
+
     const themeColors = {
-      bg: isDark ? "#09090b" : "#ffffff",
+      bg: computedBg,
       grid: isDark ? "rgba(255, 255, 255, 0.04)" : "rgba(0, 0, 0, 0.04)",
       text: isDark ? "#a1a1aa" : "#374151",
-      border: isDark ? "#27272a" : "#e4e4e7",
+      border: computedBorder,
     };
 
     // 1. Create Main Price Chart
