@@ -2,10 +2,21 @@ import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LineChart as LineChartIcon, Eye, EyeOff } from "lucide-react";
+import { LineChart as LineChartIcon, Eye, EyeOff, Maximize2, Minimize2, SlidersHorizontal } from "lucide-react";
 import { TIME_RANGES, formatCurrency } from "@/lib/constants";
 import { useTheme } from "@/components/theme-toggle";
 import { translations } from "@/lib/translations";
+import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuRadioGroup,
+} from "@/components/ui/dropdown-menu";
 import {
   createChart,
   ColorType,
@@ -92,10 +103,26 @@ export function PriceChart({
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const rsiContainerRef = useRef<HTMLDivElement>(null);
 
-  const [showMA20, setShowMA20] = useState(true);
+  const [showMA20, setShowMA20] = useState(false);
   const [showMA50, setShowMA50] = useState(false);
   const [showRSI, setShowRSI] = useState(false);
   const [viewType, setViewType] = useState<"candles" | "glow">("candles");
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [prevTimeRange, setPrevTimeRange] = useState<string | null>(null);
+
+  const toggleFullscreen = () => {
+    if (!isFullscreen) {
+      setPrevTimeRange(timeRange);
+      setIsFullscreen(true);
+      onTimeRangeChange("6m");
+    } else {
+      setIsFullscreen(false);
+      if (prevTimeRange) {
+        onTimeRangeChange(prevTimeRange);
+      }
+    }
+  };
 
   // OHLC, MA, and RSI values display state
   const [hoveredOhlc, setHoveredOhlc] = useState<{
@@ -370,9 +397,13 @@ export function PriceChart({
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width } = entry.contentRect;
+        const containerHeight = chartContainerRef.current?.clientHeight || 380;
         if (width > 0) {
-          priceChart.resize(width, 380);
-          if (rsiChart) rsiChart.resize(width, 120);
+          priceChart.resize(width, containerHeight);
+          if (rsiChart && rsiContainerRef.current) {
+            const rsiHeight = rsiContainerRef.current.clientHeight || 120;
+            rsiChart.resize(width, rsiHeight);
+          }
         }
       }
     });
@@ -384,7 +415,7 @@ export function PriceChart({
       priceChart.remove();
       if (rsiChart) rsiChart.remove();
     };
-  }, [data, viewType, showMA20, showMA50, showRSI, isDark]);
+  }, [data, viewType, showMA20, showMA50, showRSI, isDark, isFullscreen]);
 
   if (isLoading) {
     return (
@@ -430,7 +461,12 @@ export function PriceChart({
     : CANDLE_GREEN;
 
   return (
-    <Card>
+    <Card
+      className={cn(
+        "transition-all duration-300",
+        isFullscreen && "fixed inset-0 z-50 rounded-none border-none bg-background p-6 overflow-y-auto flex flex-col space-y-4"
+      )}
+    >
       {/* Header showing Stock, OHLC metrics, and Indicator status */}
       <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-2">
         <div className="flex items-center gap-3 flex-wrap">
@@ -469,24 +505,98 @@ export function PriceChart({
           )}
         </div>
 
-        {/* Timeframe Buttons */}
-        <div className="flex gap-1 self-end md:self-auto flex-wrap">
-          {TIME_RANGES.map((r) => (
-            <Button
-              key={r.value}
-              variant={timeRange === r.value ? "default" : "ghost"}
-              size="sm"
-              className="text-xs h-8 px-2.5 rounded-lg"
-              onClick={() => onTimeRangeChange(r.value)}
-            >
-              {r.label}
-            </Button>
-          ))}
+        {/* Controls Container: Timeframe + settings (mobile) + maximize */}
+        <div className="flex gap-1 items-center self-end md:self-auto flex-wrap">
+          <div className="flex gap-1">
+            {TIME_RANGES.map((r) => (
+              <Button
+                key={r.value}
+                variant={timeRange === r.value ? "default" : "ghost"}
+                size="sm"
+                className="text-xs h-8 px-2.5 rounded-lg"
+                onClick={() => onTimeRangeChange(r.value)}
+              >
+                {r.label}
+              </Button>
+            ))}
+          </div>
+
+          {/* Mobile settings dropdown: hidden on desktop, visible on mobile */}
+          <div className="md:hidden ml-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg border-border/40"
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-popover border-border text-foreground">
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  {language === "tr" ? "Grafik Ayarları" : "Chart Settings"}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                
+                {/* Indicators checkboxes */}
+                <DropdownMenuCheckboxItem
+                  checked={showMA20}
+                  onCheckedChange={setShowMA20}
+                  className="text-xs"
+                >
+                  MA 20
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={showMA50}
+                  onCheckedChange={setShowMA50}
+                  className="text-xs"
+                >
+                  MA 50
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={showRSI}
+                  onCheckedChange={setShowRSI}
+                  className="text-xs"
+                >
+                  RSI
+                </DropdownMenuCheckboxItem>
+                
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  {language === "tr" ? "Grafik Tipi" : "Chart Type"}
+                </DropdownMenuLabel>
+                
+                {/* Chart Style Radio Group */}
+                <DropdownMenuRadioGroup
+                  value={viewType}
+                  onValueChange={(val) => setViewType(val as "candles" | "glow")}
+                >
+                  <DropdownMenuRadioItem value="candles" className="text-xs">
+                    {t("candles")}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="glow" className="text-xs">
+                    {t("futuristicGlow")}
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-lg border-border/40 hover:bg-muted ml-1"
+            onClick={toggleFullscreen}
+            title={isFullscreen ? "Restore" : "Maximize"}
+          >
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
         </div>
       </CardHeader>
 
-      {/* Toggles and Chart Type Selection */}
-      <div className="flex items-center justify-between px-6 pb-2 flex-wrap gap-2">
+      {/* Desktop Toggles and Chart Type Selection (hidden on mobile) */}
+      <div className="hidden md:flex items-center justify-between px-6 pb-2 flex-wrap gap-2">
         <div className="flex items-center gap-1 flex-wrap">
           <Button
             variant={showMA20 ? "default" : "outline"}
@@ -541,17 +651,21 @@ export function PriceChart({
       </div>
 
       {/* Main TradingView Canvas Containers */}
-      <CardContent className="p-4 pt-0 space-y-2">
+      <CardContent className="p-4 pt-0 space-y-2 flex-1 flex flex-col justify-center">
         <div
           ref={chartContainerRef}
-          className="w-full rounded-md border border-border/20 overflow-hidden"
-          style={{ height: 380 }}
+          className={cn(
+            "w-full rounded-md border border-border/20 overflow-hidden transition-all duration-300",
+            isFullscreen ? "flex-1 min-h-[300px] md:min-h-[400px]" : "h-[380px]"
+          )}
         />
         {showRSI && (
           <div
             ref={rsiContainerRef}
-            className="w-full rounded-md border border-border/20 overflow-hidden"
-            style={{ height: 120 }}
+            className={cn(
+              "w-full rounded-md border border-border/20 overflow-hidden transition-all duration-300",
+              isFullscreen ? "h-[140px]" : "h-[120px]"
+            )}
           />
         )}
       </CardContent>
