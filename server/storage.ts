@@ -1,6 +1,6 @@
 import { predictions, type Prediction, type InsertPrediction, users, type User, type InsertUser, type DBInsertUser, authLogs } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, isNull, and } from "drizzle-orm";
+import { eq, desc, isNull, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -23,6 +23,8 @@ export interface IStorage {
   getUserByResetToken(token: string): Promise<User | undefined>;
   updateUserResetToken(id: string, token: string | null, expires: Date | null): Promise<void>;
   updateUserPassword(id: string, passwordHash: string): Promise<void>;
+  getAdminStats(): Promise<{ totalUsers: number, totalPredictions: number, correctPredictions: number, totalValidated: number }>;
+  getRecentActivity(limit?: number): Promise<typeof authLogs.$inferSelect[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -145,6 +147,28 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({ password: passwordHash })
       .where(eq(users.id, id));
+  }
+
+  async getAdminStats() {
+    const [userCount] = await db.select({ count: sql<number>`count(*)::int` }).from(users);
+    const [predCount] = await db.select({ count: sql<number>`count(*)::int` }).from(predictions);
+    const [correctCount] = await db.select({ count: sql<number>`count(*)::int` }).from(predictions).where(eq(predictions.wasCorrect, 1));
+    const [validatedCount] = await db.select({ count: sql<number>`count(*)::int` }).from(predictions).where(sql`${predictions.wasCorrect} IS NOT NULL`);
+
+    return {
+      totalUsers: Number(userCount.count || 0),
+      totalPredictions: Number(predCount.count || 0),
+      correctPredictions: Number(correctCount.count || 0),
+      totalValidated: Number(validatedCount.count || 0),
+    };
+  }
+
+  async getRecentActivity(limit = 10) {
+    return db
+      .select()
+      .from(authLogs)
+      .orderBy(desc(authLogs.createdAt))
+      .limit(limit);
   }
 }
 
