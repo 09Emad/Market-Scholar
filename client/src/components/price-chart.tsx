@@ -37,6 +37,7 @@ interface PriceChartProps {
   symbol: string;
   timeRange: string;
   onTimeRangeChange: (range: string) => void;
+  fill?: boolean;
 }
 
 const CANDLE_GREEN = "#26a69a";
@@ -95,6 +96,7 @@ export function PriceChart({
   symbol,
   timeRange,
   onTimeRangeChange,
+  fill = false,
 }: PriceChartProps) {
   const { isDark, language } = useTheme();
   const t = (key: keyof typeof translations.en) => {
@@ -198,7 +200,7 @@ export function PriceChart({
         borderColor: themeColors.border,
       },
       width: chartContainerRef.current.clientWidth,
-      height: 380,
+      height: chartContainerRef.current.clientHeight || 380,
     });
 
     // 2. Add Main Price Series (Candlesticks or Glow Line)
@@ -426,7 +428,7 @@ export function PriceChart({
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className={cn(fill && "h-full flex flex-col")}>
         <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
           <CardTitle className="text-base font-medium">{t("priceChart")}</CardTitle>
           <div className="flex gap-1">
@@ -435,8 +437,8 @@ export function PriceChart({
             ))}
           </div>
         </CardHeader>
-        <CardContent className="p-4 pt-0">
-          <Skeleton className="h-[450px] w-full rounded-md" />
+        <CardContent className={cn("p-4 pt-0", fill ? "flex-1 min-h-0" : "")}>
+          <Skeleton className={cn("w-full rounded-md", fill ? "h-full" : "h-[530px]")} />
         </CardContent>
       </Card>
     );
@@ -444,13 +446,13 @@ export function PriceChart({
 
   if (!data || data.length === 0) {
     return (
-      <Card>
+      <Card className={cn(fill && "h-full flex flex-col")}>
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-medium">{t("priceChart")}</CardTitle>
         </CardHeader>
-        <CardContent className="p-4 pt-0">
+        <CardContent className={cn("p-4 pt-0", fill ? "flex-1 min-h-0" : "")}>
           <div
-            className="h-[450px] flex flex-col items-center justify-center text-center rounded-lg"
+            className={cn("flex flex-col items-center justify-center text-center rounded-lg", fill ? "h-full" : "h-[530px]")}
             style={{ backgroundColor: isDark ? "#0b111e" : "#edf0f5" }}
           >
             <LineChartIcon className="h-10 w-10 mb-3 text-muted-foreground" />
@@ -620,98 +622,45 @@ export function PriceChart({
   return (
     <Card
       className={cn(
-        "transition-all duration-300 flex flex-col",
+        "transition-all duration-300 relative overflow-hidden flex flex-col",
+        fill ? "h-full" : "h-[530px]",
         isFullscreen && "fixed inset-0 z-50 rounded-none border-none bg-background p-3 md:p-6 h-[100dvh] overflow-hidden"
       )}
     >
-      {/* Header showing Stock, and Indicator status */}
-      <CardHeader className={cn("flex flex-col gap-1.5 md:gap-2 pb-2", isFullscreen && "p-1 pb-2 md:p-6 md:pb-2")}>
-        {/* Row 1: Stock Symbol, and Controls (Settings, Maximize) */}
-        <div className="flex items-center justify-between w-full gap-2">
-          <CardTitle className="text-base font-medium">{symbol}</CardTitle>
-
-          {/* Action Buttons: Settings Dropdown & Maximize */}
-          <div className="flex items-center gap-1">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 rounded-lg border-border/40 hover:bg-muted"
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-popover border-border text-foreground">
-                <DropdownMenuLabel className="text-xs text-muted-foreground">
-                  {language === "tr" ? "Grafik Ayarları" : "Chart Settings"}
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                
-                {/* Indicators checkboxes */}
-                <DropdownMenuCheckboxItem
-                  checked={showMA20}
-                  onCheckedChange={setShowMA20}
-                  className="text-xs"
-                >
-                  MA 20
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={showMA50}
-                  onCheckedChange={setShowMA50}
-                  className="text-xs"
-                >
-                  MA 50
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={showRSI}
-                  onCheckedChange={setShowRSI}
-                  className="text-xs"
-                >
-                  RSI
-                </DropdownMenuCheckboxItem>
-                
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground">
-                  {language === "tr" ? "Grafik Tipi" : "Chart Type"}
-                </DropdownMenuLabel>
-                
-                {/* Chart Style Radio Group */}
-                <DropdownMenuRadioGroup
-                  value={viewType}
-                  onValueChange={(val) => setViewType(val as "candles" | "glow")}
-                >
-                  <DropdownMenuRadioItem value="candles" className="text-xs">
-                    {t("candles")}
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="glow" className="text-xs">
-                    {t("futuristicGlow")}
-                  </DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-lg border-border/40 hover:bg-muted"
-              onClick={toggleFullscreen}
-              title={isFullscreen ? "Restore" : "Maximize"}
-            >
-              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </Button>
+      {/* Floating Controls Overlay */}
+      <div className="absolute top-3 left-3 right-3 z-10 flex justify-between items-start pointer-events-none gap-2">
+        {/* Top-Left: Symbol, OHLC, and Timeframes */}
+        <div className="pointer-events-auto flex flex-col gap-1 max-w-[85%] sm:max-w-none">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs font-bold text-foreground bg-background/60 backdrop-blur-[1px] px-1.5 py-0.5 rounded border border-border/5 shadow-2xs">{symbol}</span>
+            {currentOhlc && (
+              <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-mono leading-none bg-background/60 backdrop-blur-[1px] px-1.5 py-0.5 rounded border border-border/5 shadow-2xs">
+                <span className="text-muted-foreground">O</span>
+                <span style={{ color: ohlcColor }}>{currentOhlc.open.toFixed(2)}</span>
+                <span className="text-muted-foreground">H</span>
+                <span style={{ color: ohlcColor }}>{currentOhlc.high.toFixed(2)}</span>
+                <span className="text-muted-foreground">L</span>
+                <span style={{ color: ohlcColor }}>{currentOhlc.low.toFixed(2)}</span>
+                <span className="text-muted-foreground">C</span>
+                <span style={{ color: ohlcColor }} className="font-bold">
+                  {currentOhlc.close.toFixed(2)}
+                </span>
+              </div>
+            )}
           </div>
-        </div>
-
-        {/* Row 2: Timeframes & Hovered Indicator Info */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pt-1 border-t border-border/10">
-          <div className="flex gap-1 overflow-x-auto pb-0.5 sm:pb-0">
+          
+          {/* Timeframe Selectors */}
+          <div className="flex gap-0.5 mt-0.5 border-t border-border/5 pt-1 flex-wrap">
             {TIME_RANGES.map((r) => (
               <Button
                 key={r.value}
                 variant={timeRange === r.value ? "default" : "ghost"}
-                size="sm"
-                className="text-xs h-7 px-2.5 rounded-lg"
+                className={cn(
+                  "text-[9px] h-5 px-1.5 rounded transition-all",
+                  timeRange === r.value 
+                    ? "bg-primary text-primary-foreground font-semibold" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                )}
                 onClick={() => onTimeRangeChange(r.value)}
               >
                 {r.label}
@@ -720,59 +669,107 @@ export function PriceChart({
           </div>
 
           {/* Hovered indicator values */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap text-[10px] sm:text-xs">
-            {showMA20 && hoveredMA20 !== null && (
-              <span className="text-[10px] sm:text-xs font-mono" style={{ color: MA20_COLOR }}>
-                MA20: {hoveredMA20.toFixed(2)}
-              </span>
-            )}
-            {showMA50 && hoveredMA50 !== null && (
-              <span className="text-[10px] sm:text-xs font-mono" style={{ color: MA50_COLOR }}>
-                MA50: {hoveredMA50.toFixed(2)}
-              </span>
-            )}
-            {showRSI && hoveredRSI !== null && (
-              <span className="text-[10px] sm:text-xs font-mono" style={{ color: RSI_LINE_COLOR }}>
-                RSI: {hoveredRSI.toFixed(1)}
-              </span>
-            )}
-          </div>
-        </div>
-      </CardHeader>
-
-      {/* Main TradingView Canvas Containers */}
-      <CardContent className={cn("p-4 pt-0 space-y-2 flex-1 flex flex-col justify-center overflow-hidden", isFullscreen && "p-1 pb-2 md:p-6 md:pt-0")}>
-        <div className={cn("relative w-full overflow-hidden flex flex-col", isFullscreen ? "flex-1 min-h-[200px]" : "h-[380px]")}>
-          {currentOhlc && (
-            <div className="absolute top-2 left-2 z-10 pointer-events-none select-none flex items-center gap-1.5 text-[9px] sm:text-xs font-mono bg-background/70 backdrop-blur-[2px] px-1.5 py-0.5 rounded border border-border/10">
-              <span className="text-muted-foreground font-bold">{symbol}</span>
-              <span className="text-muted-foreground">O</span>
-              <span style={{ color: ohlcColor }}>{currentOhlc.open.toFixed(2)}</span>
-              <span className="text-muted-foreground">H</span>
-              <span style={{ color: ohlcColor }}>{currentOhlc.high.toFixed(2)}</span>
-              <span className="text-muted-foreground">L</span>
-              <span style={{ color: ohlcColor }}>{currentOhlc.low.toFixed(2)}</span>
-              <span className="text-muted-foreground">C</span>
-              <span style={{ color: ohlcColor }} className="font-bold">
-                {currentOhlc.close.toFixed(2)}
-              </span>
+          {(showMA20 || showMA50 || showRSI) && (
+            <div className="flex items-center gap-2 mt-0.5 border-t border-border/5 pt-1 text-[9px] font-mono leading-none flex-wrap">
+              {showMA20 && hoveredMA20 !== null && (
+                <span style={{ color: MA20_COLOR }}>MA20: {hoveredMA20.toFixed(2)}</span>
+              )}
+              {showMA50 && hoveredMA50 !== null && (
+                <span style={{ color: MA50_COLOR }}>MA50: {hoveredMA50.toFixed(2)}</span>
+              )}
+              {showRSI && hoveredRSI !== null && (
+                <span style={{ color: RSI_LINE_COLOR }}>RSI: {hoveredRSI.toFixed(1)}</span>
+              )}
             </div>
           )}
+        </div>
+
+        {/* Top-Right: Settings and Fullscreen Buttons */}
+        <div className="pointer-events-auto flex items-center gap-0.5 bg-background/60 backdrop-blur-[1px] p-0.5 rounded-lg border border-border/5 shadow-2xs">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-lg hover:bg-muted"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 bg-popover border-border text-foreground">
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                {language === "tr" ? "Grafik Ayarları" : "Chart Settings"}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              
+              <DropdownMenuCheckboxItem
+                checked={showMA20}
+                onCheckedChange={setShowMA20}
+                className="text-xs"
+              >
+                MA 20
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={showMA50}
+                onCheckedChange={setShowMA50}
+                className="text-xs"
+              >
+                MA 50
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={showRSI}
+                onCheckedChange={setShowRSI}
+                className="text-xs"
+              >
+                RSI
+              </DropdownMenuCheckboxItem>
+              
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                {language === "tr" ? "Grafik Tipi" : "Chart Type"}
+              </DropdownMenuLabel>
+              
+              <DropdownMenuRadioGroup
+                value={viewType}
+                onValueChange={(val) => setViewType(val as "candles" | "glow")}
+              >
+                <DropdownMenuRadioItem value="candles" className="text-xs">
+                  {t("candles")}
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="glow" className="text-xs">
+                  {t("futuristicGlow")}
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-lg hover:bg-muted"
+            onClick={toggleFullscreen}
+            title={isFullscreen ? "Restore" : "Maximize"}
+          >
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
+        </div>
+      </div>
+
+      {/* Base Layer: Chart Containers - no padding, edge-to-edge */}
+      <div className="w-full h-full flex flex-col p-0 overflow-hidden flex-1">
+        <div className="flex-1 w-full relative">
           <div
             ref={chartContainerRef}
-            className="w-full h-full rounded-md border border-border/20 overflow-hidden"
+            className="w-full h-full"
           />
         </div>
         {showRSI && (
           <div
             ref={rsiContainerRef}
-            className={cn(
-              "w-full rounded-md border border-border/20 overflow-hidden transition-all duration-300",
-              isFullscreen ? "h-[120px]" : "h-[120px]"
-            )}
+            className="w-full h-[120px] border-t border-border/10 bg-background/20"
           />
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }
