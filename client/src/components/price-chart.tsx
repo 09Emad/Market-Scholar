@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -346,6 +347,12 @@ export function PriceChart({
       });
     }
 
+    // Fit content horizontally
+    priceChart.timeScale().fitContent();
+    if (rsiChart) {
+      rsiChart.timeScale().fitContent();
+    }
+
     // 6. Subscribe to Crosshair / Hover Events to show OHLC & Indicators
     priceChart.subscribeCrosshairMove((param) => {
       if (!param.time || !param.point) {
@@ -460,75 +467,177 @@ export function PriceChart({
       : CANDLE_RED
     : CANDLE_GREEN;
 
-  return (
-    <Card
-      className={cn(
-        "transition-all duration-300",
-        isFullscreen && "fixed inset-0 z-50 rounded-none border-none bg-background p-6 overflow-y-auto flex flex-col space-y-4"
-      )}
-    >
-      {/* Header showing Stock, OHLC metrics, and Indicator status */}
-      <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-2">
-        <div className="flex items-center gap-3 flex-wrap">
-          <CardTitle className="text-base font-medium">{symbol}</CardTitle>
-
-          {currentOhlc && (
-            <div className="flex items-center gap-1.5 text-xs font-mono select-none">
-              <span className="text-muted-foreground">O</span>
-              <span style={{ color: ohlcColor }}>{currentOhlc.open.toFixed(2)}</span>
-              <span className="text-muted-foreground">H</span>
-              <span style={{ color: ohlcColor }}>{currentOhlc.high.toFixed(2)}</span>
-              <span className="text-muted-foreground">L</span>
-              <span style={{ color: ohlcColor }}>{currentOhlc.low.toFixed(2)}</span>
-              <span className="text-muted-foreground">C</span>
-              <span style={{ color: ohlcColor }} className="font-bold">
-                {currentOhlc.close.toFixed(2)}
-              </span>
-            </div>
-          )}
-
-          {/* Indicator Values */}
-          {showMA20 && hoveredMA20 !== null && (
-            <span className="text-xs font-mono" style={{ color: MA20_COLOR }}>
-              MA20: {hoveredMA20.toFixed(2)}
-            </span>
-          )}
-          {showMA50 && hoveredMA50 !== null && (
-            <span className="text-xs font-mono" style={{ color: MA50_COLOR }}>
-              MA50: {hoveredMA50.toFixed(2)}
-            </span>
-          )}
-          {showRSI && hoveredRSI !== null && (
-            <span className="text-xs font-mono" style={{ color: RSI_LINE_COLOR }}>
-              RSI: {hoveredRSI.toFixed(1)}
-            </span>
+  if (isFullscreen) {
+    return createPortal(
+      <div className="fixed inset-0 z-[999] bg-background overflow-hidden flex flex-col select-none">
+        {/* Base Layer: Fullscreen Chart Container */}
+        <div className="absolute inset-0 w-full h-full flex flex-col p-0">
+          <div
+            ref={chartContainerRef}
+            className="flex-1 w-full"
+          />
+          {showRSI && (
+            <div
+              ref={rsiContainerRef}
+              className="w-full h-[120px] border-t border-border/10 bg-background/40 backdrop-blur-[1px]"
+            />
           )}
         </div>
 
-        {/* Controls Container: Timeframe + settings (mobile) + maximize */}
-        <div className="flex gap-1 items-center self-end md:self-auto flex-wrap">
-          <div className="flex gap-1">
-            {TIME_RANGES.map((r) => (
-              <Button
-                key={r.value}
-                variant={timeRange === r.value ? "default" : "ghost"}
-                size="sm"
-                className="text-xs h-8 px-2.5 rounded-lg"
-                onClick={() => onTimeRangeChange(r.value)}
-              >
-                {r.label}
-              </Button>
-            ))}
+        {/* Floating Top Controls (Top-Left: Symbol, OHLC, Timeframes; Top-Right: Settings & Minimize) */}
+        <div className="absolute top-3 left-3 right-3 md:top-8 md:left-8 md:right-8 z-20 flex justify-between items-start pointer-events-none gap-2">
+          {/* Top-Left: Stock Symbol, OHLC, and Timeframes */}
+          <div className="pointer-events-auto flex flex-col gap-1 bg-background/85 backdrop-blur-md p-2 rounded-xl border border-border/20 shadow-lg select-none max-w-[85%] sm:max-w-none">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-foreground">{symbol}</span>
+            </div>
+            {currentOhlc && (
+              <div className="flex items-center gap-1 text-[8px] sm:text-[10px] font-mono flex-wrap leading-tight">
+                <span className="text-muted-foreground">O</span>
+                <span style={{ color: ohlcColor }}>{currentOhlc.open.toFixed(2)}</span>
+                <span className="text-muted-foreground">H</span>
+                <span style={{ color: ohlcColor }}>{currentOhlc.high.toFixed(2)}</span>
+                <span className="text-muted-foreground">L</span>
+                <span style={{ color: ohlcColor }}>{currentOhlc.low.toFixed(2)}</span>
+                <span className="text-muted-foreground">C</span>
+                <span style={{ color: ohlcColor }} className="font-bold">
+                  {currentOhlc.close.toFixed(2)}
+                </span>
+              </div>
+            )}
+            
+            {/* Timeframe Selectors: Very small and compact */}
+            <div className="flex gap-0.5 mt-0.5 border-t border-border/10 pt-1 flex-wrap">
+              {TIME_RANGES.map((r) => (
+                <Button
+                  key={r.value}
+                  variant={timeRange === r.value ? "default" : "ghost"}
+                  className={cn(
+                    "text-[9px] h-5 px-1.5 rounded transition-all",
+                    timeRange === r.value 
+                      ? "bg-primary text-primary-foreground font-semibold" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                  )}
+                  onClick={() => onTimeRangeChange(r.value)}
+                >
+                  {r.label}
+                </Button>
+              ))}
+            </div>
           </div>
 
-          {/* Mobile settings dropdown: hidden on desktop, visible on mobile */}
-          <div className="md:hidden ml-1">
+          {/* Top-Right: Settings and Restore Buttons */}
+          <div className="pointer-events-auto flex items-center gap-1 bg-background/85 backdrop-blur-md p-1 rounded-xl border border-border/20 shadow-lg">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg hover:bg-muted"
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-popover border-border text-foreground">
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  {language === "tr" ? "Grafik Ayarları" : "Chart Settings"}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuCheckboxItem
+                  checked={showMA20}
+                  onCheckedChange={setShowMA20}
+                  className="text-xs"
+                >
+                  MA 20
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={showMA50}
+                  onCheckedChange={setShowMA50}
+                  className="text-xs"
+                >
+                  MA 50
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={showRSI}
+                  onCheckedChange={setShowRSI}
+                  className="text-xs"
+                >
+                  RSI
+                </DropdownMenuCheckboxItem>
+                
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  {language === "tr" ? "Grafik Tipi" : "Chart Type"}
+                </DropdownMenuLabel>
+                
+                <DropdownMenuRadioGroup
+                  value={viewType}
+                  onValueChange={(val) => setViewType(val as "candles" | "glow")}
+                >
+                  <DropdownMenuRadioItem value="candles" className="text-xs">
+                    {t("candles")}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="glow" className="text-xs">
+                    {t("futuristicGlow")}
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-lg hover:bg-muted"
+              onClick={toggleFullscreen}
+            >
+              <Minimize2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Floating Bottom Right: Indicators Hover values */}
+        {(showMA20 || showMA50 || showRSI) && (
+          <div className="absolute bottom-3 right-3 md:bottom-8 md:right-8 z-20 pointer-events-none">
+            <div className="pointer-events-auto flex items-center gap-2.5 bg-background/85 backdrop-blur-md px-3 py-1.5 rounded-lg border border-border/20 shadow-lg text-[9px] sm:text-xs font-mono">
+              {showMA20 && hoveredMA20 !== null && (
+                <span style={{ color: MA20_COLOR }}>MA20: {hoveredMA20.toFixed(2)}</span>
+              )}
+              {showMA50 && hoveredMA50 !== null && (
+                <span style={{ color: MA50_COLOR }}>MA50: {hoveredMA50.toFixed(2)}</span>
+              )}
+              {showRSI && hoveredRSI !== null && (
+                <span style={{ color: RSI_LINE_COLOR }}>RSI: {hoveredRSI.toFixed(1)}</span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>,
+      document.body
+    );
+  }
+
+  return (
+    <Card
+      className={cn(
+        "transition-all duration-300 flex flex-col",
+        isFullscreen && "fixed inset-0 z-50 rounded-none border-none bg-background p-3 md:p-6 h-[100dvh] overflow-hidden"
+      )}
+    >
+      {/* Header showing Stock, and Indicator status */}
+      <CardHeader className={cn("flex flex-col gap-1.5 md:gap-2 pb-2", isFullscreen && "p-1 pb-2 md:p-6 md:pb-2")}>
+        {/* Row 1: Stock Symbol, and Controls (Settings, Maximize) */}
+        <div className="flex items-center justify-between w-full gap-2">
+          <CardTitle className="text-base font-medium">{symbol}</CardTitle>
+
+          {/* Action Buttons: Settings Dropdown & Maximize */}
+          <div className="flex items-center gap-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-8 w-8 rounded-lg border-border/40"
+                  className="h-8 w-8 rounded-lg border-border/40 hover:bg-muted"
                 >
                   <SlidersHorizontal className="h-4 w-4" />
                 </Button>
@@ -581,90 +690,85 @@ export function PriceChart({
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-lg border-border/40 hover:bg-muted"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? "Restore" : "Maximize"}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* Row 2: Timeframes & Hovered Indicator Info */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pt-1 border-t border-border/10">
+          <div className="flex gap-1 overflow-x-auto pb-0.5 sm:pb-0">
+            {TIME_RANGES.map((r) => (
+              <Button
+                key={r.value}
+                variant={timeRange === r.value ? "default" : "ghost"}
+                size="sm"
+                className="text-xs h-7 px-2.5 rounded-lg"
+                onClick={() => onTimeRangeChange(r.value)}
+              >
+                {r.label}
+              </Button>
+            ))}
           </div>
 
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 rounded-lg border-border/40 hover:bg-muted ml-1"
-            onClick={toggleFullscreen}
-            title={isFullscreen ? "Restore" : "Maximize"}
-          >
-            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-          </Button>
+          {/* Hovered indicator values */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap text-[10px] sm:text-xs">
+            {showMA20 && hoveredMA20 !== null && (
+              <span className="text-[10px] sm:text-xs font-mono" style={{ color: MA20_COLOR }}>
+                MA20: {hoveredMA20.toFixed(2)}
+              </span>
+            )}
+            {showMA50 && hoveredMA50 !== null && (
+              <span className="text-[10px] sm:text-xs font-mono" style={{ color: MA50_COLOR }}>
+                MA50: {hoveredMA50.toFixed(2)}
+              </span>
+            )}
+            {showRSI && hoveredRSI !== null && (
+              <span className="text-[10px] sm:text-xs font-mono" style={{ color: RSI_LINE_COLOR }}>
+                RSI: {hoveredRSI.toFixed(1)}
+              </span>
+            )}
+          </div>
         </div>
       </CardHeader>
 
-      {/* Desktop Toggles and Chart Type Selection (hidden on mobile) */}
-      <div className="hidden md:flex items-center justify-between px-6 pb-2 flex-wrap gap-2">
-        <div className="flex items-center gap-1 flex-wrap">
-          <Button
-            variant={showMA20 ? "default" : "outline"}
-            size="sm"
-            className="text-xs h-7 px-2.5 rounded-lg gap-1 transition-all"
-            onClick={() => setShowMA20(!showMA20)}
-            style={showMA20 ? { backgroundColor: MA20_COLOR, borderColor: MA20_COLOR } : {}}
-          >
-            {showMA20 ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-            MA 20
-          </Button>
-          <Button
-            variant={showMA50 ? "default" : "outline"}
-            size="sm"
-            className="text-xs h-7 px-2.5 rounded-lg gap-1 transition-all"
-            onClick={() => setShowMA50(!showMA50)}
-            style={showMA50 ? { backgroundColor: MA50_COLOR, borderColor: MA50_COLOR } : {}}
-          >
-            {showMA50 ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-            MA 50
-          </Button>
-          <Button
-            variant={showRSI ? "default" : "outline"}
-            size="sm"
-            className="text-xs h-7 px-2.5 rounded-lg gap-1 transition-all"
-            onClick={() => setShowRSI(!showRSI)}
-            style={showRSI ? { backgroundColor: RSI_LINE_COLOR, borderColor: RSI_LINE_COLOR } : {}}
-          >
-            {showRSI ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-            RSI
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-1 bg-muted p-0.5 rounded-lg border border-border/40">
-          <Button
-            variant={viewType === "candles" ? "secondary" : "ghost"}
-            size="sm"
-            className="text-xs h-6 px-3 rounded-md font-semibold transition-all"
-            onClick={() => setViewType("candles")}
-          >
-            {t("candles")}
-          </Button>
-          <Button
-            variant={viewType === "glow" ? "secondary" : "ghost"}
-            size="sm"
-            className="text-xs h-6 px-3 rounded-md font-semibold transition-all"
-            onClick={() => setViewType("glow")}
-          >
-            {t("futuristicGlow")}
-          </Button>
-        </div>
-      </div>
-
       {/* Main TradingView Canvas Containers */}
-      <CardContent className="p-4 pt-0 space-y-2 flex-1 flex flex-col justify-center">
-        <div
-          ref={chartContainerRef}
-          className={cn(
-            "w-full rounded-md border border-border/20 overflow-hidden transition-all duration-300",
-            isFullscreen ? "flex-1 min-h-[300px] md:min-h-[400px]" : "h-[380px]"
+      <CardContent className={cn("p-4 pt-0 space-y-2 flex-1 flex flex-col justify-center overflow-hidden", isFullscreen && "p-1 pb-2 md:p-6 md:pt-0")}>
+        <div className={cn("relative w-full overflow-hidden flex flex-col", isFullscreen ? "flex-1 min-h-[200px]" : "h-[380px]")}>
+          {currentOhlc && (
+            <div className="absolute top-2 left-2 z-10 pointer-events-none select-none flex items-center gap-1.5 text-[9px] sm:text-xs font-mono bg-background/70 backdrop-blur-[2px] px-1.5 py-0.5 rounded border border-border/10">
+              <span className="text-muted-foreground font-bold">{symbol}</span>
+              <span className="text-muted-foreground">O</span>
+              <span style={{ color: ohlcColor }}>{currentOhlc.open.toFixed(2)}</span>
+              <span className="text-muted-foreground">H</span>
+              <span style={{ color: ohlcColor }}>{currentOhlc.high.toFixed(2)}</span>
+              <span className="text-muted-foreground">L</span>
+              <span style={{ color: ohlcColor }}>{currentOhlc.low.toFixed(2)}</span>
+              <span className="text-muted-foreground">C</span>
+              <span style={{ color: ohlcColor }} className="font-bold">
+                {currentOhlc.close.toFixed(2)}
+              </span>
+            </div>
           )}
-        />
+          <div
+            ref={chartContainerRef}
+            className="w-full h-full rounded-md border border-border/20 overflow-hidden"
+          />
+        </div>
         {showRSI && (
           <div
             ref={rsiContainerRef}
             className={cn(
               "w-full rounded-md border border-border/20 overflow-hidden transition-all duration-300",
-              isFullscreen ? "h-[140px]" : "h-[120px]"
+              isFullscreen ? "h-[120px]" : "h-[120px]"
             )}
           />
         )}
