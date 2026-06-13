@@ -2,10 +2,22 @@ import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LineChart as LineChartIcon } from "lucide-react";
+import { LineChart as LineChartIcon, Eye, EyeOff } from "lucide-react";
 import { TIME_RANGES, formatCurrency } from "@/lib/constants";
 import { useTheme } from "@/components/theme-toggle";
 import { translations } from "@/lib/translations";
+import {
+  createChart,
+  ColorType,
+  LineStyle,
+  IChartApi,
+  ISeriesApi,
+  UTCTimestamp,
+  CandlestickSeries,
+  AreaSeries,
+  HistogramSeries,
+  LineSeries
+} from "lightweight-charts";
 
 interface PriceChartProps {
   data: Array<{ date: string; close: number; open: number; high: number; low: number; volume: number }> | null;
@@ -20,52 +32,17 @@ const CANDLE_RED = "#ef5350";
 const MA20_COLOR = "#f7a21b";
 const MA50_COLOR = "#2962ff";
 const RSI_LINE_COLOR = "#7b61ff";
-const RSI_OVERBOUGHT = "#ef5350";
-const RSI_OVERSOLD = "#26a69a";
-
-function getChartTheme(isDark: boolean) {
-  return {
-    bg: isDark ? "#131722" : "#ffffff",
-    grid: isDark ? "#1e222d" : "#e0e3eb",
-    axis: isDark ? "#787b86" : "#6b7280",
-    crosshair: isDark ? "#9598a1" : "#9ca3af",
-    volumeUp: isDark ? "rgba(38,166,154,0.3)" : "rgba(38,166,154,0.4)",
-    volumeDown: isDark ? "rgba(239,83,80,0.3)" : "rgba(239,83,80,0.4)",
-    rsiZone: isDark ? "rgba(123,97,255,0.05)" : "rgba(123,97,255,0.08)",
-    rsiGrid: isDark ? "#1e222d" : "#e0e3eb",
-    textColor: isDark ? "#d1d4dc" : "#374151",
-  };
-}
 
 interface ChartEntry {
-  date: string;
+  time: UTCTimestamp;
   open: number;
   high: number;
   low: number;
   close: number;
   volume: number;
-  isUp: boolean;
 }
 
-function formatVol(v: number): string {
-  if (v >= 1e9) return `${(v / 1e9).toFixed(2)}B`;
-  if (v >= 1e6) return `${(v / 1e6).toFixed(2)}M`;
-  if (v >= 1e3) return `${(v / 1e3).toFixed(0)}K`;
-  return String(v);
-}
-
-function getNiceTickInterval(range: number, targetTicks: number): number {
-  const rough = range / targetTicks;
-  const magnitude = Math.pow(10, Math.floor(Math.log10(rough)));
-  const residual = rough / magnitude;
-  let nice: number;
-  if (residual <= 1.5) nice = 1;
-  else if (residual <= 3) nice = 2;
-  else if (residual <= 7) nice = 5;
-  else nice = 10;
-  return nice * magnitude;
-}
-
+// Helpers for calculations
 function calcMA(data: ChartEntry[], period: number): (number | null)[] {
   return data.map((_, i) => {
     if (i < period - 1) return null;
@@ -100,382 +77,6 @@ function calcRSI(data: ChartEntry[], period: number = 14): (number | null)[] {
   return rsi;
 }
 
-function CandlestickSVG({
-  data,
-  width,
-  height,
-  hoveredIndex,
-  onHover,
-  lastPrice,
-  showMA20,
-  showMA50,
-  showRSI,
-  isDark,
-  viewType,
-}: {
-  data: ChartEntry[];
-  width: number;
-  height: number;
-  hoveredIndex: number | null;
-  onHover: (index: number | null) => void;
-  lastPrice: number;
-  showMA20: boolean;
-  showMA50: boolean;
-  showRSI: boolean;
-  isDark: boolean;
-  viewType: "candles" | "glow";
-}) {
-  const theme = getChartTheme(isDark);
-  const margin = { top: 8, right: 70, bottom: 28, left: 8 };
-  const rsiHeight = showRSI ? 80 : 0;
-  const rsiGap = showRSI ? 6 : 0;
-  const volumeHeight = height * 0.12;
-  const priceHeight = height - margin.top - margin.bottom - volumeHeight - 4 - rsiHeight - rsiGap;
-  const chartWidth = width - margin.left - margin.right;
-
-  if (chartWidth <= 0 || priceHeight <= 0) return null;
-
-  const highs = data.map(d => d.high);
-  const lows = data.map(d => d.low);
-  const pMin = Math.min(...lows);
-  const pMax = Math.max(...highs);
-  const pRange = pMax - pMin || 1;
-  const padding = pRange * 0.06;
-  const domainMin = pMin - padding;
-  const domainMax = pMax + padding;
-  const vMax = Math.max(...data.map(d => d.volume), 1);
-
-  const priceScale = (val: number) => margin.top + ((domainMax - val) / (domainMax - domainMin)) * priceHeight;
-  const volBottom = margin.top + priceHeight + 4 + volumeHeight;
-  const volScale = (val: number) => volBottom - (val / vMax) * volumeHeight;
-
-  const barGap = chartWidth / data.length;
-  const candleWidth = Math.max(1, Math.min(barGap * 0.6, 14));
-
-  const labelCount = Math.max(1, Math.floor(chartWidth / 90));
-  const step = Math.max(1, Math.floor(data.length / labelCount));
-  const xLabels: { index: number; label: string }[] = [];
-  for (let i = 0; i < data.length; i += step) {
-    xLabels.push({ index: i, label: data[i].date });
-  }
-
-  const tickInterval = getNiceTickInterval(domainMax - domainMin, Math.floor(priceHeight / 40));
-  const priceTicks: number[] = [];
-  const firstTick = Math.ceil(domainMin / tickInterval) * tickInterval;
-  for (let t = firstTick; t <= domainMax; t += tickInterval) {
-    priceTicks.push(t);
-  }
-
-  const lastEntry = data[data.length - 1];
-  const isLastUp = lastEntry.close >= lastEntry.open;
-  const currentPriceY = priceScale(lastPrice);
-  const currentPriceColor = isLastUp ? CANDLE_GREEN : CANDLE_RED;
-
-  const isUpTrend = data.length > 0 && data[data.length - 1].close >= data[0].close;
-  const glowColor = isUpTrend ? CANDLE_GREEN : CANDLE_RED;
-
-  const hoveredEntry = hoveredIndex !== null ? data[hoveredIndex] : null;
-  const hoveredX = hoveredIndex !== null ? margin.left + hoveredIndex * barGap + barGap / 2 : 0;
-  const hoveredY = hoveredEntry ? priceScale(hoveredEntry.close) : 0;
-
-  const chartRight = margin.left + chartWidth;
-  const chartBottom = margin.top + priceHeight;
-
-  const decimals = tickInterval < 1 ? 2 : tickInterval < 10 ? 2 : 0;
-
-  const ma20 = showMA20 ? calcMA(data, 20) : [];
-  const ma50 = showMA50 ? calcMA(data, 50) : [];
-  const rsiValues = showRSI ? calcRSI(data, 14) : [];
-
-  const buildMAPath = (maValues: (number | null)[]) => {
-    let path = "";
-    let started = false;
-    for (let i = 0; i < maValues.length; i++) {
-      const v = maValues[i];
-      if (v === null) continue;
-      const x = margin.left + i * barGap + barGap / 2;
-      const y = priceScale(v);
-      if (!started) {
-        path += `M${x},${y}`;
-        started = true;
-      } else {
-        path += `L${x},${y}`;
-      }
-    }
-    return path;
-  };
-
-  const buildLinePath = () => {
-    let path = "";
-    let started = false;
-    for (let i = 0; i < data.length; i++) {
-      const x = margin.left + i * barGap + barGap / 2;
-      const y = priceScale(data[i].close);
-      if (!started) {
-        path += `M${x},${y}`;
-        started = true;
-      } else {
-        path += `L${x},${y}`;
-      }
-    }
-    return path;
-  };
-
-  const buildAreaPath = () => {
-    if (data.length === 0) return "";
-    let path = "";
-    let started = false;
-    const yBottom = volBottom;
-    for (let i = 0; i < data.length; i++) {
-      const x = margin.left + i * barGap + barGap / 2;
-      const y = priceScale(data[i].close);
-      if (!started) {
-        path += `M${x},${yBottom} L${x},${y}`;
-        started = true;
-      } else {
-        path += `L${x},${y}`;
-      }
-    }
-    const lastX = margin.left + (data.length - 1) * barGap + barGap / 2;
-    path += `L${lastX},${yBottom} Z`;
-    return path;
-  };
-
-  const rsiTop = volBottom + rsiGap;
-  const rsiBottom = rsiTop + rsiHeight;
-  const rsiScale = (val: number) => rsiTop + ((100 - val) / 100) * rsiHeight;
-
-  const buildRSIPath = () => {
-    let path = "";
-    let started = false;
-    for (let i = 0; i < rsiValues.length; i++) {
-      const v = rsiValues[i];
-      if (v === null) continue;
-      const x = margin.left + i * barGap + barGap / 2;
-      const y = rsiScale(v);
-      if (!started) {
-        path += `M${x},${y}`;
-        started = true;
-      } else {
-        path += `L${x},${y}`;
-      }
-    }
-    return path;
-  };
-
-  const hoveredRSI = hoveredIndex !== null && rsiValues[hoveredIndex] !== null ? rsiValues[hoveredIndex] : null;
-  const hoveredMA20 = hoveredIndex !== null && showMA20 && ma20[hoveredIndex] !== null ? ma20[hoveredIndex] : null;
-  const hoveredMA50 = hoveredIndex !== null && showMA50 && ma50[hoveredIndex] !== null ? ma50[hoveredIndex] : null;
-
-  const totalBottom = showRSI ? rsiBottom : volBottom;
-
-  const lastX = margin.left + (data.length - 1) * barGap + barGap / 2;
-  const lastY = priceScale(data[data.length - 1].close);
-
-  return (
-    <svg width={width} height={height} className="select-none" style={{ backgroundColor: theme.bg }}>
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes chartPulse {
-          0% { r: 3px; opacity: 0.9; }
-          100% { r: 12px; opacity: 0; }
-        }
-        .chart-pulse-dot {
-          animation: chartPulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-        }
-      ` }} />
-      <defs>
-        <clipPath id="chartArea">
-          <rect x={margin.left} y={margin.top} width={chartWidth} height={priceHeight + 4 + volumeHeight} />
-        </clipPath>
-        <clipPath id="rsiArea">
-          <rect x={margin.left} y={rsiTop} width={chartWidth} height={rsiHeight} />
-        </clipPath>
-        <filter id="neon-glow-green" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="3" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-        <filter id="neon-glow-red" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="3" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-        <linearGradient id="gradient-green" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={CANDLE_GREEN} stopOpacity="0.25" />
-          <stop offset="100%" stopColor={CANDLE_GREEN} stopOpacity="0.0" />
-        </linearGradient>
-        <linearGradient id="gradient-red" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={CANDLE_RED} stopOpacity="0.25" />
-          <stop offset="100%" stopColor={CANDLE_RED} stopOpacity="0.0" />
-        </linearGradient>
-      </defs>
-
-      {priceTicks.map((tick, i) => {
-        const y = priceScale(tick);
-        if (y < margin.top || y > chartBottom) return null;
-        return (
-          <g key={`grid-${i}`}>
-            <line x1={margin.left} y1={y} x2={chartRight} y2={y} stroke={theme.grid} strokeWidth={1} />
-            <text x={chartRight + 8} y={y + 4} fontSize={11} fill={theme.axis} fontFamily="monospace" textAnchor="start">
-              {tick.toFixed(decimals)}
-            </text>
-          </g>
-        );
-      })}
-
-      <line x1={chartRight} y1={margin.top} x2={chartRight} y2={totalBottom} stroke={theme.grid} strokeWidth={1} />
-
-      <g clipPath="url(#chartArea)">
-        {/* Render Volume in background (faded if glow mode is active) */}
-        {data.map((d, i) => {
-          const x = margin.left + i * barGap + barGap / 2;
-          const volTop = volScale(d.volume);
-          return (
-            <rect
-              key={`vol-${i}`}
-              x={x - candleWidth / 2}
-              y={volTop}
-              width={candleWidth}
-              height={Math.max(0, volBottom - volTop)}
-              fill={d.isUp ? theme.volumeUp : theme.volumeDown}
-              opacity={viewType === "glow" ? 0.3 : 1}
-            />
-          );
-        })}
-
-        {viewType === "candles" ? (
-          // Traditional Candlestick view
-          data.map((d, i) => {
-            const x = margin.left + i * barGap + barGap / 2;
-            const color = d.isUp ? CANDLE_GREEN : CANDLE_RED;
-            const bodyTop = priceScale(d.isUp ? d.close : d.open);
-            const bodyBottom = priceScale(d.isUp ? d.open : d.close);
-            const bodyH = Math.max(1, bodyBottom - bodyTop);
-            const wickTop = priceScale(d.high);
-            const wickBottom = priceScale(d.low);
-
-            return (
-              <g key={`candle-${i}`}>
-                <line x1={x} y1={wickTop} x2={x} y2={wickBottom} stroke={color} strokeWidth={1} />
-                <rect x={x - candleWidth / 2} y={bodyTop} width={candleWidth} height={bodyH} fill={color} />
-              </g>
-            );
-          })
-        ) : (
-          // Futuristic Glow Line & Area view
-          <>
-            <path
-              d={buildAreaPath()}
-              fill={isUpTrend ? "url(#gradient-green)" : "url(#gradient-red)"}
-              pointerEvents="none"
-            />
-            <path
-              d={buildLinePath()}
-              fill="none"
-              stroke={glowColor}
-              strokeWidth={2.5}
-              filter={isUpTrend ? "url(#neon-glow-green)" : "url(#neon-glow-red)"}
-              pointerEvents="none"
-            />
-            {data.length > 0 && (
-              <g pointerEvents="none">
-                {/* Glowing target point */}
-                <circle
-                  cx={lastX}
-                  cy={lastY}
-                  r={4}
-                  fill={glowColor}
-                />
-                <circle
-                  cx={lastX}
-                  cy={lastY}
-                  r={6}
-                  fill="none"
-                  stroke={glowColor}
-                  strokeWidth={2}
-                  className="chart-pulse-dot"
-                />
-              </g>
-            )}
-          </>
-        )}
-
-        {showMA20 && ma20.length > 0 && (
-          <path d={buildMAPath(ma20)} fill="none" stroke={MA20_COLOR} strokeWidth={1.5} opacity={0.9} />
-        )}
-        {showMA50 && ma50.length > 0 && (
-          <path d={buildMAPath(ma50)} fill="none" stroke={MA50_COLOR} strokeWidth={1.5} opacity={0.9} />
-        )}
-      </g>
-
-      {showRSI && (
-        <g>
-          <line x1={margin.left} y1={rsiTop} x2={chartRight} y2={rsiTop} stroke={theme.axis} strokeWidth={0.5} opacity={0.5} />
-          <line x1={margin.left} y1={rsiScale(70)} x2={chartRight} y2={rsiScale(70)} stroke={RSI_OVERBOUGHT} strokeWidth={0.5} strokeDasharray="3 3" opacity={0.5} />
-          <line x1={margin.left} y1={rsiScale(30)} x2={chartRight} y2={rsiScale(30)} stroke={RSI_OVERSOLD} strokeWidth={0.5} strokeDasharray="3 3" opacity={0.5} />
-          <line x1={margin.left} y1={rsiScale(50)} x2={chartRight} y2={rsiScale(50)} stroke={theme.grid} strokeWidth={0.5} strokeDasharray="2 2" />
-          <line x1={margin.left} y1={rsiBottom} x2={chartRight} y2={rsiBottom} stroke={theme.grid} strokeWidth={0.5} />
-
-          <text x={chartRight + 8} y={rsiScale(70) + 4} fontSize={9} fill={RSI_OVERBOUGHT} fontFamily="monospace" opacity={0.7}>70</text>
-          <text x={chartRight + 8} y={rsiScale(50) + 4} fontSize={9} fill={theme.axis} fontFamily="monospace" opacity={0.7}>50</text>
-          <text x={chartRight + 8} y={rsiScale(30) + 4} fontSize={9} fill={RSI_OVERSOLD} fontFamily="monospace" opacity={0.7}>30</text>
-
-          <text x={margin.left + 4} y={rsiTop + 12} fontSize={10} fill={RSI_LINE_COLOR} fontFamily="monospace" opacity={0.8}>RSI(14)</text>
-
-          <g clipPath="url(#rsiArea)">
-            <path d={buildRSIPath()} fill="none" stroke={RSI_LINE_COLOR} strokeWidth={1.5} />
-          </g>
-        </g>
-      )}
-
-      {data.map((_, i) => {
-        const x = margin.left + i * barGap;
-        return (
-          <rect key={`hover-${i}`} x={x} y={0} width={barGap} height={height} fill="transparent" onMouseEnter={() => onHover(i)} />
-        );
-      })}
-
-      <line x1={margin.left} y1={currentPriceY} x2={chartRight} y2={currentPriceY} stroke={currentPriceColor} strokeWidth={1} strokeDasharray="2 2" opacity={0.7} pointerEvents="none" />
-      <rect x={chartRight} y={currentPriceY - 10} width={margin.right - 2} height={20} rx={2} fill={currentPriceColor} pointerEvents="none" />
-      <text x={chartRight + (margin.right - 2) / 2} y={currentPriceY + 4} fontSize={10} fill="#fff" fontFamily="monospace" fontWeight="bold" textAnchor="middle" pointerEvents="none">
-        {lastPrice.toFixed(2)}
-      </text>
-
-      {hoveredIndex !== null && hoveredEntry && (
-        <g pointerEvents="none">
-          <line x1={hoveredX} y1={margin.top} x2={hoveredX} y2={totalBottom} stroke={theme.crosshair} strokeWidth={0.5} strokeDasharray="4 3" opacity={0.7} />
-          <line x1={margin.left} y1={hoveredY} x2={chartRight} y2={hoveredY} stroke={theme.crosshair} strokeWidth={0.5} strokeDasharray="4 3" opacity={0.7} />
-          <rect x={chartRight} y={hoveredY - 10} width={margin.right - 2} height={20} rx={2} fill="#363a45" />
-          <text x={chartRight + (margin.right - 2) / 2} y={hoveredY + 4} fontSize={10} fill="#d1d4dc" fontFamily="monospace" textAnchor="middle">
-            {hoveredEntry.close.toFixed(2)}
-          </text>
-
-          {showRSI && hoveredRSI !== null && (
-            <>
-              <line x1={hoveredX} y1={rsiTop} x2={hoveredX} y2={rsiBottom} stroke={theme.crosshair} strokeWidth={0.5} strokeDasharray="4 3" opacity={0.5} />
-              <circle cx={hoveredX} cy={rsiScale(hoveredRSI)} r={3} fill={RSI_LINE_COLOR} />
-            </>
-          )}
-        </g>
-      )}
-
-      {xLabels.map(({ index, label }) => (
-        <text key={`xlabel-${index}`} x={margin.left + index * barGap + barGap / 2} y={height - 6} fontSize={10} fill={theme.axis} fontFamily="monospace" textAnchor="middle">
-          {label}
-        </text>
-      ))}
-
-      <text x={margin.left + 6} y={margin.top + 14} fontSize={10} fill={theme.axis} fontFamily="monospace" opacity={0.7}>
-        Vol {formatVol(lastEntry.volume)}
-      </text>
-    </svg>
-  );
-}
-
 export function PriceChart({
   data,
   isLoading,
@@ -487,31 +88,300 @@ export function PriceChart({
   const t = (key: keyof typeof translations.en) => {
     return translations[language]?.[key] || translations.en[key] || key;
   };
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 600, height: 450 });
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const rsiContainerRef = useRef<HTMLDivElement>(null);
+
   const [showMA20, setShowMA20] = useState(true);
   const [showMA50, setShowMA50] = useState(false);
   const [showRSI, setShowRSI] = useState(false);
   const [viewType, setViewType] = useState<"candles" | "glow">("candles");
 
+  // OHLC, MA, and RSI values display state
+  const [hoveredOhlc, setHoveredOhlc] = useState<{
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+  } | null>(null);
+  const [hoveredMA20, setHoveredMA20] = useState<number | null>(null);
+  const [hoveredMA50, setHoveredMA50] = useState<number | null>(null);
+  const [hoveredRSI, setHoveredRSI] = useState<number | null>(null);
+
+  // Parse and sort unique data points
+  const getProcessedData = (): ChartEntry[] => {
+    if (!data || data.length === 0) return [];
+    const formatted = data
+      .map((d) => ({
+        time: Math.floor(new Date(d.date).getTime() / 1000) as UTCTimestamp,
+        open: d.open,
+        high: d.high,
+        low: d.low,
+        close: d.close,
+        volume: d.volume,
+      }))
+      .sort((a, b) => a.time - b.time);
+
+    const unique: ChartEntry[] = [];
+    const seen = new Set<number>();
+    for (const item of formatted) {
+      if (!seen.has(item.time)) {
+        seen.add(item.time);
+        unique.push(item);
+      }
+    }
+    return unique;
+  };
+
+  const chartData = getProcessedData();
+  const lastPrice = chartData.length > 0 ? chartData[chartData.length - 1].close : 0;
+  const currentOhlc = hoveredOhlc || (chartData.length > 0 ? chartData[chartData.length - 1] : null);
+
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver((entries) => {
+    if (chartData.length === 0 || !chartContainerRef.current) return;
+
+    const themeColors = {
+      bg: isDark ? "#09090b" : "#ffffff",
+      grid: isDark ? "rgba(255, 255, 255, 0.04)" : "rgba(0, 0, 0, 0.04)",
+      text: isDark ? "#a1a1aa" : "#374151",
+      border: isDark ? "#27272a" : "#e4e4e7",
+    };
+
+    // 1. Create Main Price Chart
+    const priceChart = createChart(chartContainerRef.current, {
+      layout: {
+        background: { type: ColorType.Solid, color: themeColors.bg },
+        textColor: themeColors.text,
+        fontFamily: "monospace",
+      },
+      grid: {
+        vertLines: { color: themeColors.grid },
+        horzLines: { color: themeColors.grid },
+      },
+      timeScale: {
+        borderColor: themeColors.border,
+        timeVisible: true,
+        secondsVisible: false,
+      },
+      rightPriceScale: {
+        borderColor: themeColors.border,
+      },
+      width: chartContainerRef.current.clientWidth,
+      height: 380,
+    });
+
+    // 2. Add Main Price Series (Candlesticks or Glow Line)
+    let mainSeries: ISeriesApi<"Candlestick"> | ISeriesApi<"Area">;
+    if (viewType === "candles") {
+      const series = priceChart.addSeries(CandlestickSeries, {
+        upColor: CANDLE_GREEN,
+        downColor: CANDLE_RED,
+        borderUpColor: CANDLE_GREEN,
+        borderDownColor: CANDLE_RED,
+        wickUpColor: CANDLE_GREEN,
+        wickDownColor: CANDLE_RED,
+      });
+      series.setData(chartData);
+      mainSeries = series;
+    } else {
+      const series = priceChart.addSeries(AreaSeries, {
+        topColor: isDark ? "rgba(99, 102, 241, 0.25)" : "rgba(99, 102, 241, 0.3)",
+        bottomColor: "rgba(99, 102, 241, 0.0)",
+        lineColor: "#6366f1",
+        lineWidth: 2,
+      });
+      series.setData(
+        chartData.map((d) => ({ time: d.time, value: d.close }))
+      );
+      mainSeries = series;
+    }
+
+    // 3. Add Volume Series Overlay
+    const volumeSeries = priceChart.addSeries(HistogramSeries, {
+      priceFormat: {
+        type: "volume",
+      },
+      priceScaleId: "", // Overlay on main chart
+    });
+    volumeSeries.priceScale().applyOptions({
+      scaleMargins: {
+        top: 0.7, // Place at bottom 30% of main chart
+        bottom: 0,
+      },
+    });
+    volumeSeries.setData(
+      chartData.map((d) => ({
+        time: d.time,
+        value: d.volume,
+        color: d.close >= d.open ? "rgba(38, 166, 154, 0.18)" : "rgba(239, 83, 80, 0.18)",
+      }))
+    );
+
+    // 4. Add MA Series Line Overlays
+    const ma20Data = calcMA(chartData, 20)
+      .map((val, idx) => ({ time: chartData[idx].time, value: val }))
+      .filter((item): item is { time: UTCTimestamp; value: number } => item.value !== null);
+
+    const ma50Data = calcMA(chartData, 50)
+      .map((val, idx) => ({ time: chartData[idx].time, value: val }))
+      .filter((item): item is { time: UTCTimestamp; value: number } => item.value !== null);
+
+    let ma20Series: ISeriesApi<"Line"> | null = null;
+    if (showMA20) {
+      const series = priceChart.addSeries(LineSeries, {
+        color: MA20_COLOR,
+        lineWidth: 2,
+        title: "MA 20",
+      });
+      series.setData(ma20Data);
+      ma20Series = series;
+    }
+
+    let ma50Series: ISeriesApi<"Line"> | null = null;
+    if (showMA50) {
+      const series = priceChart.addSeries(LineSeries, {
+        color: MA50_COLOR,
+        lineWidth: 2,
+        title: "MA 50",
+      });
+      series.setData(ma50Data);
+      ma50Series = series;
+    }
+
+    // 5. Create RSI Sub-Chart (if enabled)
+    let rsiChart: IChartApi | null = null;
+    let rsiSeries: ISeriesApi<"Line"> | null = null;
+
+    if (showRSI && rsiContainerRef.current) {
+      rsiChart = createChart(rsiContainerRef.current, {
+        layout: {
+          background: { type: ColorType.Solid, color: themeColors.bg },
+          textColor: themeColors.text,
+          fontFamily: "monospace",
+        },
+        grid: {
+          vertLines: { color: themeColors.grid },
+          horzLines: { color: themeColors.grid },
+        },
+        timeScale: {
+          borderColor: themeColors.border,
+          visible: true,
+          timeVisible: true,
+        },
+        rightPriceScale: {
+          borderColor: themeColors.border,
+          scaleMargins: {
+            top: 0.1,
+            bottom: 0.1,
+          },
+        },
+        width: rsiContainerRef.current.clientWidth,
+        height: 120,
+      });
+
+      const series = rsiChart.addSeries(LineSeries, {
+        color: RSI_LINE_COLOR,
+        lineWidth: 2,
+        title: "RSI (14)",
+      });
+
+      const rsiData = calcRSI(chartData, 14)
+        .map((val, idx) => ({ time: chartData[idx].time, value: val }))
+        .filter((item): item is { time: UTCTimestamp; value: number } => item.value !== null);
+
+      series.setData(rsiData);
+      rsiSeries = series;
+
+      // Add boundary lines for RSI (70 & 30)
+      const rsiOverboughtLine = rsiChart.addSeries(LineSeries, {
+        color: "rgba(239, 83, 80, 0.4)",
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+      });
+      rsiOverboughtLine.setData(chartData.map((d) => ({ time: d.time, value: 70 })));
+
+      const rsiOversoldLine = rsiChart.addSeries(LineSeries, {
+        color: "rgba(38, 166, 154, 0.4)",
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+      });
+      rsiOversoldLine.setData(chartData.map((d) => ({ time: d.time, value: 30 })));
+
+      // Synchronize visible ranges
+      priceChart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+        if (range && rsiChart) rsiChart.timeScale().setVisibleLogicalRange(range);
+      });
+      rsiChart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+        if (range) priceChart.timeScale().setVisibleLogicalRange(range);
+      });
+    }
+
+    // 6. Subscribe to Crosshair / Hover Events to show OHLC & Indicators
+    priceChart.subscribeCrosshairMove((param) => {
+      if (!param.time || !param.point) {
+        setHoveredOhlc(null);
+        setHoveredMA20(null);
+        setHoveredMA50(null);
+        return;
+      }
+
+      // Extract Price OHLC
+      const priceVal = param.seriesData.get(mainSeries as any);
+      if (priceVal) {
+        if ("open" in priceVal) {
+          setHoveredOhlc({
+            open: priceVal.open as number,
+            high: priceVal.high as number,
+            low: priceVal.low as number,
+            close: priceVal.close as number,
+          });
+        } else if ("value" in priceVal) {
+          const val = priceVal.value as number;
+          setHoveredOhlc({ open: val, high: val, low: val, close: val });
+        }
+      }
+
+      // Extract MA values
+      if (ma20Series) {
+        const ma20Val = param.seriesData.get(ma20Series as any) as { value: number } | undefined;
+        setHoveredMA20(ma20Val?.value ?? null);
+      }
+      if (ma50Series) {
+        const ma50Val = param.seriesData.get(ma50Series as any) as { value: number } | undefined;
+        setHoveredMA50(ma50Val?.value ?? null);
+      }
+    });
+
+    if (rsiChart && rsiSeries) {
+      rsiChart.subscribeCrosshairMove((param) => {
+        if (!param.time || !param.point) {
+          setHoveredRSI(null);
+          return;
+        }
+        const rsiVal = param.seriesData.get(rsiSeries as any) as { value: number } | undefined;
+        setHoveredRSI(rsiVal?.value ?? null);
+      });
+    }
+
+    // 7. Handle Responsiveness
+    const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        // Only update if dimensions are positive (ignores collapsed hidden tabs)
-        if (width > 0 && height > 0) {
-          setDimensions({ width, height });
+        const { width } = entry.contentRect;
+        if (width > 0) {
+          priceChart.resize(width, 380);
+          if (rsiChart) rsiChart.resize(width, 120);
         }
       }
     });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [isLoading, data]);
+    resizeObserver.observe(chartContainerRef.current);
 
-  const chartHeight = showRSI ? 540 : 450;
+    // Clean up instances on unmount/re-render
+    return () => {
+      resizeObserver.disconnect();
+      priceChart.remove();
+      if (rsiChart) rsiChart.remove();
+    };
+  }, [data, viewType, showMA20, showMA50, showRSI, isDark]);
 
   if (isLoading) {
     return (
@@ -538,70 +408,72 @@ export function PriceChart({
           <CardTitle className="text-base font-medium">{t("priceChart")}</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
-          <div className="h-[450px] flex flex-col items-center justify-center text-center" style={{ backgroundColor: getChartTheme(isDark).bg, borderRadius: 6 }}>
-            <LineChartIcon className="h-10 w-10 mb-3" style={{ color: getChartTheme(isDark).axis }} />
-            <p className="text-sm" style={{ color: getChartTheme(isDark).axis }}>{t("selectStockPriceHistory")}</p>
+          <div
+            className="h-[450px] flex flex-col items-center justify-center text-center rounded-lg"
+            style={{ backgroundColor: isDark ? "#09090b" : "#ffffff" }}
+          >
+            <LineChartIcon className="h-10 w-10 mb-3 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">{t("selectStockPriceHistory")}</p>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  const chartData: ChartEntry[] = data.map((d) => ({
-    ...d,
-    isUp: d.close >= d.open,
-  }));
-
-  const lastPrice = chartData[chartData.length - 1].close;
-  const margin = { top: 8, right: 70, bottom: 28, left: 8 };
-  const chartWidth = dimensions.width - margin.left - margin.right;
-  const barGap = chartWidth / chartData.length;
-
-  const hoveredEntry = hoveredIndex !== null ? chartData[hoveredIndex] : null;
-  const ohlcDisplay = hoveredEntry || chartData[chartData.length - 1];
-  const ohlcUp = ohlcDisplay.close >= ohlcDisplay.open;
-  const ohlcColor = ohlcUp ? CANDLE_GREEN : CANDLE_RED;
-
-  const ma20Values = showMA20 ? calcMA(chartData, 20) : [];
-  const ma50Values = showMA50 ? calcMA(chartData, 50) : [];
-  const rsiValues = showRSI ? calcRSI(chartData, 14) : [];
-  const hoveredMA20 = hoveredIndex !== null && showMA20 && ma20Values[hoveredIndex] !== null ? ma20Values[hoveredIndex] : null;
-  const hoveredMA50 = hoveredIndex !== null && showMA50 && ma50Values[hoveredIndex] !== null ? ma50Values[hoveredIndex] : null;
-  const hoveredRSI = hoveredIndex !== null && showRSI && rsiValues[hoveredIndex] !== null ? rsiValues[hoveredIndex] : null;
+  const ohlcColor = currentOhlc
+    ? currentOhlc.close >= currentOhlc.open
+      ? CANDLE_GREEN
+      : CANDLE_RED
+    : CANDLE_GREEN;
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-2 pb-1">
+      {/* Header showing Stock, OHLC metrics, and Indicator status */}
+      <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-2">
         <div className="flex items-center gap-3 flex-wrap">
           <CardTitle className="text-base font-medium">{symbol}</CardTitle>
-          <div className="flex items-center gap-2 text-xs font-mono" data-testid="ohlc-bar">
-            <span style={{ color: getChartTheme(isDark).axis }}>O</span>
-            <span style={{ color: ohlcColor }}>{ohlcDisplay.open.toFixed(2)}</span>
-            <span style={{ color: getChartTheme(isDark).axis }}>H</span>
-            <span style={{ color: ohlcColor }}>{ohlcDisplay.high.toFixed(2)}</span>
-            <span style={{ color: getChartTheme(isDark).axis }}>L</span>
-            <span style={{ color: ohlcColor }}>{ohlcDisplay.low.toFixed(2)}</span>
-            <span style={{ color: getChartTheme(isDark).axis }}>C</span>
-            <span style={{ color: ohlcColor }} className="font-medium">{ohlcDisplay.close.toFixed(2)}</span>
-          </div>
-          {hoveredMA20 !== null && (
-            <span className="text-xs font-mono" style={{ color: MA20_COLOR }}>MA20: {hoveredMA20.toFixed(2)}</span>
+
+          {currentOhlc && (
+            <div className="flex items-center gap-1.5 text-xs font-mono select-none">
+              <span className="text-muted-foreground">O</span>
+              <span style={{ color: ohlcColor }}>{currentOhlc.open.toFixed(2)}</span>
+              <span className="text-muted-foreground">H</span>
+              <span style={{ color: ohlcColor }}>{currentOhlc.high.toFixed(2)}</span>
+              <span className="text-muted-foreground">L</span>
+              <span style={{ color: ohlcColor }}>{currentOhlc.low.toFixed(2)}</span>
+              <span className="text-muted-foreground">C</span>
+              <span style={{ color: ohlcColor }} className="font-bold">
+                {currentOhlc.close.toFixed(2)}
+              </span>
+            </div>
           )}
-          {hoveredMA50 !== null && (
-            <span className="text-xs font-mono" style={{ color: MA50_COLOR }}>MA50: {hoveredMA50.toFixed(2)}</span>
+
+          {/* Indicator Values */}
+          {showMA20 && hoveredMA20 !== null && (
+            <span className="text-xs font-mono" style={{ color: MA20_COLOR }}>
+              MA20: {hoveredMA20.toFixed(2)}
+            </span>
           )}
-          {hoveredRSI !== null && (
-            <span className="text-xs font-mono" style={{ color: RSI_LINE_COLOR }}>RSI: {hoveredRSI.toFixed(1)}</span>
+          {showMA50 && hoveredMA50 !== null && (
+            <span className="text-xs font-mono" style={{ color: MA50_COLOR }}>
+              MA50: {hoveredMA50.toFixed(2)}
+            </span>
+          )}
+          {showRSI && hoveredRSI !== null && (
+            <span className="text-xs font-mono" style={{ color: RSI_LINE_COLOR }}>
+              RSI: {hoveredRSI.toFixed(1)}
+            </span>
           )}
         </div>
-        <div className="flex gap-1 flex-wrap">
+
+        {/* Timeframe Buttons */}
+        <div className="flex gap-1 self-end md:self-auto flex-wrap">
           {TIME_RANGES.map((r) => (
             <Button
               key={r.value}
-              data-testid={`button-range-${r.value}`}
               variant={timeRange === r.value ? "default" : "ghost"}
               size="sm"
-              className="text-xs px-2.5"
+              className="text-xs h-8 px-2.5 rounded-lg"
               onClick={() => onTimeRangeChange(r.value)}
             >
               {r.label}
@@ -610,36 +482,37 @@ export function PriceChart({
         </div>
       </CardHeader>
 
-      <div className="flex items-center justify-between px-4 pb-1 flex-wrap gap-2">
+      {/* Toggles and Chart Type Selection */}
+      <div className="flex items-center justify-between px-6 pb-2 flex-wrap gap-2">
         <div className="flex items-center gap-1 flex-wrap">
           <Button
-            data-testid="button-indicator-ma20"
             variant={showMA20 ? "default" : "outline"}
             size="sm"
-            className="text-xs h-6 px-2"
+            className="text-xs h-7 px-2.5 rounded-lg gap-1 transition-all"
             onClick={() => setShowMA20(!showMA20)}
             style={showMA20 ? { backgroundColor: MA20_COLOR, borderColor: MA20_COLOR } : {}}
           >
+            {showMA20 ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
             MA 20
           </Button>
           <Button
-            data-testid="button-indicator-ma50"
             variant={showMA50 ? "default" : "outline"}
             size="sm"
-            className="text-xs h-6 px-2"
+            className="text-xs h-7 px-2.5 rounded-lg gap-1 transition-all"
             onClick={() => setShowMA50(!showMA50)}
             style={showMA50 ? { backgroundColor: MA50_COLOR, borderColor: MA50_COLOR } : {}}
           >
+            {showMA50 ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
             MA 50
           </Button>
           <Button
-            data-testid="button-indicator-rsi"
             variant={showRSI ? "default" : "outline"}
             size="sm"
-            className="text-xs h-6 px-2"
+            className="text-xs h-7 px-2.5 rounded-lg gap-1 transition-all"
             onClick={() => setShowRSI(!showRSI)}
             style={showRSI ? { backgroundColor: RSI_LINE_COLOR, borderColor: RSI_LINE_COLOR } : {}}
           >
+            {showRSI ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
             RSI
           </Button>
         </div>
@@ -648,7 +521,7 @@ export function PriceChart({
           <Button
             variant={viewType === "candles" ? "secondary" : "ghost"}
             size="sm"
-            className="text-xs h-6 px-2.5 py-0 rounded-md font-medium"
+            className="text-xs h-6 px-3 rounded-md font-semibold transition-all"
             onClick={() => setViewType("candles")}
           >
             {t("candles")}
@@ -656,7 +529,7 @@ export function PriceChart({
           <Button
             variant={viewType === "glow" ? "secondary" : "ghost"}
             size="sm"
-            className="text-xs h-6 px-2.5 py-0 rounded-md font-medium"
+            className="text-xs h-6 px-3 rounded-md font-semibold transition-all"
             onClick={() => setViewType("glow")}
           >
             {t("futuristicGlow")}
@@ -664,28 +537,20 @@ export function PriceChart({
         </div>
       </div>
 
-      <CardContent className="p-2 pt-0">
+      {/* Main TradingView Canvas Containers */}
+      <CardContent className="p-4 pt-0 space-y-2">
         <div
-          ref={containerRef}
-          className="relative rounded-md"
-          style={{ overflow: "hidden", height: chartHeight }}
-          data-testid="candlestick-chart"
-          onMouseLeave={() => setHoveredIndex(null)}
-        >
-          <CandlestickSVG
-            data={chartData}
-            width={dimensions.width}
-            height={dimensions.height}
-            hoveredIndex={hoveredIndex}
-            onHover={setHoveredIndex}
-            lastPrice={lastPrice}
-            showMA20={showMA20}
-            showMA50={showMA50}
-            showRSI={showRSI}
-            isDark={isDark}
-            viewType={viewType}
+          ref={chartContainerRef}
+          className="w-full rounded-md border border-border/20 overflow-hidden"
+          style={{ height: 380 }}
+        />
+        {showRSI && (
+          <div
+            ref={rsiContainerRef}
+            className="w-full rounded-md border border-border/20 overflow-hidden"
+            style={{ height: 120 }}
           />
-        </div>
+        )}
       </CardContent>
     </Card>
   );
